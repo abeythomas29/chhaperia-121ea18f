@@ -56,8 +56,11 @@ Deno.serve(async (req) => {
       });
     }
 
-    const updatePayload: Record<string, string> = {};
-    if (email) updatePayload.email = email;
+    const updatePayload: Record<string, unknown> = {};
+    if (email) {
+      updatePayload.email = email;
+      updatePayload.email_confirm = true;
+    }
     if (password) {
       if (password.length < 6) {
         return new Response(JSON.stringify({ error: "Password must be at least 6 characters" }), {
