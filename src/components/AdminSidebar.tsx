@@ -20,8 +20,9 @@ import {
   SidebarHeader,
   SidebarFooter,
 } from "@/components/ui/sidebar";
-import { Factory } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Link } from "react-router-dom";
+import logo from "@/assets/logo.png";
 
 const mainItems = [
   { title: "Dashboard", url: "/admin", icon: LayoutDashboard },
@@ -40,15 +41,13 @@ export function AdminSidebar() {
   return (
     <Sidebar>
       <SidebarHeader className="p-4 border-b border-sidebar-border">
-        <div className="flex items-center gap-3">
-          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-sidebar-primary">
-            <Factory className="h-5 w-5 text-sidebar-primary-foreground" />
-          </div>
+        <Link to="/admin" className="flex items-center gap-3">
+          <img src={logo} alt="Chhaperia Cables" className="h-9 w-auto" />
           <div>
             <p className="text-sm font-bold text-sidebar-foreground">Chhaperia Cables</p>
             <p className="text-xs text-sidebar-foreground/60">Admin Panel</p>
           </div>
-        </div>
+        </Link>
       </SidebarHeader>
       <SidebarContent>
         <SidebarGroup>

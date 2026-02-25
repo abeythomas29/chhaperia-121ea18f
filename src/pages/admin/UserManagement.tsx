@@ -189,7 +189,7 @@ export default function UserManagement() {
                 <Select value={form.role} onValueChange={(v) => setForm({ ...form, role: v as AppRole })}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="worker">Worker</SelectItem>
+                    <SelectItem value="worker">Production Manager</SelectItem>
                     <SelectItem value="admin">Admin</SelectItem>
                     <SelectItem value="super_admin">Super Admin</SelectItem>
                   </SelectContent>
@@ -219,7 +219,7 @@ export default function UserManagement() {
                 <TableCell className="font-medium">{u.name}</TableCell>
                 <TableCell>{u.employee_id}</TableCell>
                 <TableCell>{u.username}</TableCell>
-                <TableCell><Badge variant="outline">{u.role ?? "—"}</Badge></TableCell>
+                <TableCell><Badge variant="outline">{u.role === "worker" ? "Production Manager" : u.role ?? "—"}</Badge></TableCell>
                 <TableCell>
                   <Badge
                     variant={u.status === "active" ? "default" : "secondary"}
@@ -256,7 +256,7 @@ export default function UserManagement() {
               <Select value={editForm.role} onValueChange={(v) => setEditForm({ ...editForm, role: v as AppRole })}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="worker">Worker</SelectItem>
+                  <SelectItem value="worker">Production Manager</SelectItem>
                   <SelectItem value="admin">Admin</SelectItem>
                   <SelectItem value="super_admin">Super Admin</SelectItem>
                 </SelectContent>

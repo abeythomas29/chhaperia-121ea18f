@@ -51,7 +51,7 @@ export default function ProductionLogs() {
 
   const exportCSV = () => {
     const rows = [
-      ["Date", "Product Code", "Client", "Worker", "Rolls", "Qty/Roll", "Total", "Unit"],
+      ["Date", "Product Code", "Client", "Production Manager", "Rolls", "Qty/Roll", "Total", "Unit"],
       ...filtered.map((e) => [
         e.date,
         e.product_codes?.code ?? "",
@@ -84,7 +84,7 @@ export default function ProductionLogs() {
       <div className="relative max-w-sm">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
         <Input
-          placeholder="Search by product, client, worker..."
+          placeholder="Search by product, client, production manager..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           className="pl-9"
@@ -98,7 +98,7 @@ export default function ProductionLogs() {
               <TableHead>Date</TableHead>
               <TableHead>Product Code</TableHead>
               <TableHead>Client</TableHead>
-              <TableHead>Worker</TableHead>
+              <TableHead>Production Manager</TableHead>
               <TableHead className="text-right">Rolls</TableHead>
               <TableHead className="text-right">Qty/Roll</TableHead>
               <TableHead className="text-right">Total</TableHead>

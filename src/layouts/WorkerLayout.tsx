@@ -1,6 +1,7 @@
 import { Outlet, Navigate, Link, useLocation } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
-import { Factory, ClipboardList, History, LogOut, Loader2 } from "lucide-react";
+import { ClipboardList, History, LogOut, Loader2 } from "lucide-react";
+import logo from "@/assets/logo.png";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -26,12 +27,12 @@ export default function WorkerLayout() {
   return (
     <div className="min-h-screen bg-background">
       <header className="h-14 border-b bg-primary text-primary-foreground flex items-center justify-between px-4">
-        <div className="flex items-center gap-3">
-          <Factory className="h-5 w-5" />
+        <Link to="/worker" className="flex items-center gap-3">
+          <img src={logo} alt="Chhaperia Cables" className="h-8 w-auto" />
           <span className="font-bold text-sm">Chhaperia Cables</span>
-        </div>
+        </Link>
         <div className="flex items-center gap-2">
-          <span className="text-xs opacity-80 hidden sm:inline">{profileName ?? "Worker"}</span>
+          <span className="text-xs opacity-80 hidden sm:inline">{profileName ?? "Production Manager"}</span>
           <Button variant="ghost" size="icon" onClick={signOut} className="text-primary-foreground/80 hover:text-primary-foreground hover:bg-primary/80">
             <LogOut className="h-4 w-4" />
           </Button>
