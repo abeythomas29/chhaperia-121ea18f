@@ -248,7 +248,7 @@ export default function Products() {
                 </div>
               </div>
             ))}
-            {categories.length === 0 && <p className="text-sm text-muted-foreground">No categories yet</p>}
+            {filteredCategories.length === 0 && <p className="text-sm text-muted-foreground">No categories found</p>}
           </CardContent>
         </Card>
 
