@@ -254,9 +254,9 @@ export default function Products() {
 
         {/* Product Codes Card */}
         <Card>
-          <CardHeader><CardTitle className="text-lg">Product Codes ({codes.length})</CardTitle></CardHeader>
+          <CardHeader><CardTitle className="text-lg">Product Codes ({filteredCodes.length})</CardTitle></CardHeader>
           <CardContent className="space-y-2">
-            {codes.map((c) => (
+            {filteredCodes.map((c) => (
               <div key={c.id} className="flex items-center justify-between py-2 px-3 rounded-lg bg-muted/50">
                 <div>
                   <span className="font-medium text-sm">{c.code}</span>
