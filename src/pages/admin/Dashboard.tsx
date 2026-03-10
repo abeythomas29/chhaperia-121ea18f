@@ -53,11 +53,11 @@ export default function Dashboard() {
       const monthAgo = format(subDays(now, 30), "yyyy-MM-dd");
 
       const [todayRes, weekRes, monthRes, productsRes, clientsRes] = await Promise.all([
-        supabase.from("production_entries").select("id", { count: "exact", head: true }).eq("date", todayStr),
-        supabase.from("production_entries").select("id", { count: "exact", head: true }).gte("date", weekAgo),
-        supabase.from("production_entries").select("id", { count: "exact", head: true }).gte("date", monthAgo),
-        supabase.from("product_codes").select("id", { count: "exact", head: true }).eq("status", "active"),
-        supabase.from("company_clients").select("id", { count: "exact", head: true }).eq("status", "active"),
+        supabase.from("production_entries").select("id", { count: "exact" }).eq("date", todayStr),
+        supabase.from("production_entries").select("id", { count: "exact" }).gte("date", weekAgo),
+        supabase.from("production_entries").select("id", { count: "exact" }).gte("date", monthAgo),
+        supabase.from("product_codes").select("id", { count: "exact" }).eq("status", "active"),
+        supabase.from("company_clients").select("id", { count: "exact" }).eq("status", "active"),
       ]);
 
       setStats({
