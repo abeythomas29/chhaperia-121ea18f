@@ -410,6 +410,10 @@ export default function ProductionLogs() {
                 </SelectContent>
               </Select>
             </div>
+            <div className="space-y-2">
+              <Label>Thickness (mm)</Label>
+              <Input type="number" value={editThickness} onChange={(e) => setEditThickness(e.target.value)} min={0} step="0.01" placeholder="e.g. 0.25" />
+            </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setEditEntry(null)}>Cancel</Button>
