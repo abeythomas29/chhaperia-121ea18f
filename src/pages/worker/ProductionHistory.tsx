@@ -68,6 +68,7 @@ export default function ProductionHistory() {
                   <TableCell className="text-right">{e.rolls_count}</TableCell>
                   <TableCell className="text-right font-semibold">{e.total_quantity ?? (e.rolls_count * e.quantity_per_roll)}</TableCell>
                   <TableCell>{e.unit}</TableCell>
+                  <TableCell className="text-right">{e.thickness_mm ?? "—"}</TableCell>
                 </TableRow>
               ))
             )}
