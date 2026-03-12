@@ -22,6 +22,7 @@ interface LogEntry {
   quantity_per_roll: number;
   total_quantity: number | null;
   unit: string;
+  thickness_mm: number | null;
   product_code_id: string;
   client_id: string;
   product_codes: { code: string } | null;
@@ -61,6 +62,7 @@ export default function ProductionLogs() {
   const [editRolls, setEditRolls] = useState("");
   const [editQtyPerRoll, setEditQtyPerRoll] = useState("");
   const [editUnit, setEditUnit] = useState("meters");
+  const [editThickness, setEditThickness] = useState("");
   const [saving, setSaving] = useState(false);
 
   // Delete state
@@ -75,7 +77,7 @@ export default function ProductionLogs() {
     setLoading(true);
     const { data } = await supabase
       .from("production_entries")
-      .select("id, date, rolls_count, quantity_per_roll, total_quantity, unit, product_code_id, client_id, product_codes(code), company_clients(name), profiles:worker_id(name)")
+      .select("id, date, rolls_count, quantity_per_roll, total_quantity, unit, thickness_mm, product_code_id, client_id, product_codes(code), company_clients(name), profiles:worker_id(name)")
       .order("date", { ascending: false })
       .limit(500);
 
@@ -134,7 +136,7 @@ export default function ProductionLogs() {
 
   const exportCSV = () => {
     const rows = [
-      ["Date", "Product Code", "Client", "Production Manager", "Rolls", "Qty/Roll", "Total", "Unit"],
+      ["Date", "Product Code", "Client", "Production Manager", "Rolls", "Qty/Roll", "Total", "Unit", "Thickness (mm)"],
       ...filtered.map((e) => [
         e.date,
         e.product_codes?.code ?? "",
@@ -144,6 +146,7 @@ export default function ProductionLogs() {
         e.quantity_per_roll,
         e.total_quantity ?? "",
         e.unit,
+        e.thickness_mm ?? "",
       ]),
     ];
     const csv = rows.map((r) => r.join(",")).join("\n");
@@ -164,6 +167,7 @@ export default function ProductionLogs() {
     setEditRolls(String(entry.rolls_count));
     setEditQtyPerRoll(String(entry.quantity_per_roll));
     setEditUnit(entry.unit);
+    setEditThickness(entry.thickness_mm != null ? String(entry.thickness_mm) : "");
   };
 
   const handleSaveEdit = async () => {
@@ -178,6 +182,7 @@ export default function ProductionLogs() {
         rolls_count: Number(editRolls),
         quantity_per_roll: Number(editQtyPerRoll),
         unit: editUnit,
+        thickness_mm: editThickness ? Number(editThickness) : null,
       })
       .eq("id", editEntry.id);
 
@@ -306,17 +311,18 @@ export default function ProductionLogs() {
               <TableHead className="text-right">Qty/Roll</TableHead>
               <TableHead className="text-right">Total</TableHead>
               <TableHead>Unit</TableHead>
+              <TableHead className="text-right">Thickness (mm)</TableHead>
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {loading ? (
               <TableRow>
-                <TableCell colSpan={10} className="text-center py-8 text-muted-foreground">Loading...</TableCell>
+                <TableCell colSpan={11} className="text-center py-8 text-muted-foreground">Loading...</TableCell>
               </TableRow>
             ) : filtered.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={10} className="text-center py-8 text-muted-foreground">No entries found</TableCell>
+                <TableCell colSpan={11} className="text-center py-8 text-muted-foreground">No entries found</TableCell>
               </TableRow>
             ) : (
               filtered.map((e) => (
@@ -332,6 +338,7 @@ export default function ProductionLogs() {
                   <TableCell className="text-right">{e.quantity_per_roll}</TableCell>
                   <TableCell className="text-right font-semibold">{e.total_quantity ?? "—"}</TableCell>
                   <TableCell>{e.unit}</TableCell>
+                  <TableCell className="text-right">{e.thickness_mm ?? "—"}</TableCell>
                   <TableCell className="text-right">
                     <div className="flex justify-end gap-1">
                       <Button variant="ghost" size="icon" onClick={() => openEdit(e)} title="Edit">
@@ -402,6 +409,10 @@ export default function ProductionLogs() {
                   <SelectItem value="kg">Kg</SelectItem>
                 </SelectContent>
               </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Thickness (mm)</Label>
+              <Input type="number" value={editThickness} onChange={(e) => setEditThickness(e.target.value)} min={0} step="0.01" placeholder="e.g. 0.25" />
             </div>
           </div>
           <DialogFooter>

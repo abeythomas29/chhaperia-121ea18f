@@ -11,6 +11,7 @@ interface HistoryEntry {
   quantity_per_roll: number;
   total_quantity: number | null;
   unit: string;
+  thickness_mm: number | null;
   product_codes: { code: string } | null;
   company_clients: { name: string } | null;
 }
@@ -25,7 +26,7 @@ export default function ProductionHistory() {
     const fetch = async () => {
       const { data } = await supabase
         .from("production_entries")
-        .select("id, date, rolls_count, quantity_per_roll, total_quantity, unit, product_codes(code), company_clients(name)")
+        .select("id, date, rolls_count, quantity_per_roll, total_quantity, unit, thickness_mm, product_codes(code), company_clients(name)")
         .eq("worker_id", user.id)
         .order("date", { ascending: false })
         .limit(200);
@@ -50,13 +51,14 @@ export default function ProductionHistory() {
               <TableHead className="text-right">Rolls</TableHead>
               <TableHead className="text-right">Total</TableHead>
               <TableHead>Unit</TableHead>
+              <TableHead className="text-right">Thickness (mm)</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {loading ? (
-              <TableRow><TableCell colSpan={6} className="text-center py-8 text-muted-foreground">Loading...</TableCell></TableRow>
+              <TableRow><TableCell colSpan={7} className="text-center py-8 text-muted-foreground">Loading...</TableCell></TableRow>
             ) : entries.length === 0 ? (
-              <TableRow><TableCell colSpan={6} className="text-center py-8 text-muted-foreground">No entries yet</TableCell></TableRow>
+              <TableRow><TableCell colSpan={7} className="text-center py-8 text-muted-foreground">No entries yet</TableCell></TableRow>
             ) : (
               entries.map((e) => (
                 <TableRow key={e.id}>
@@ -66,6 +68,7 @@ export default function ProductionHistory() {
                   <TableCell className="text-right">{e.rolls_count}</TableCell>
                   <TableCell className="text-right font-semibold">{e.total_quantity ?? (e.rolls_count * e.quantity_per_roll)}</TableCell>
                   <TableCell>{e.unit}</TableCell>
+                  <TableCell className="text-right">{e.thickness_mm ?? "—"}</TableCell>
                 </TableRow>
               ))
             )}

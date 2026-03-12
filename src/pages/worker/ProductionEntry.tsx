@@ -26,6 +26,7 @@ export default function ProductionEntry() {
     rolls_count: "",
     quantity_per_roll: "",
     unit: "meters",
+    thickness_mm: "",
   });
 
   const [newProductCode, setNewProductCode] = useState("");
@@ -66,7 +67,7 @@ export default function ProductionEntry() {
       rolls_count: Number(form.rolls_count),
       quantity_per_roll: Number(form.quantity_per_roll),
       unit: form.unit,
-      
+      thickness_mm: form.thickness_mm ? Number(form.thickness_mm) : null,
     });
 
     if (error) {
@@ -74,7 +75,7 @@ export default function ProductionEntry() {
     } else {
       setSubmitted(true);
       setTimeout(() => {
-        setForm({ date: format(new Date(), "yyyy-MM-dd"), product_code_id: "", client_id: "", rolls_count: "", quantity_per_roll: "", unit: "meters" });
+        setForm({ date: format(new Date(), "yyyy-MM-dd"), product_code_id: "", client_id: "", rolls_count: "", quantity_per_roll: "", unit: "meters", thickness_mm: "" });
         setSubmitted(false);
       }, 2000);
     }
@@ -221,6 +222,11 @@ export default function ProductionEntry() {
               <Label>Quantity per Roll</Label>
               <Input type="number" min="0" step="0.01" value={form.quantity_per_roll} onChange={(e) => setForm({ ...form, quantity_per_roll: e.target.value })} placeholder="0" />
             </div>
+          </div>
+
+          <div>
+            <Label>Thickness (mm)</Label>
+            <Input type="number" min="0" step="0.01" value={form.thickness_mm} onChange={(e) => setForm({ ...form, thickness_mm: e.target.value })} placeholder="e.g. 0.25" />
           </div>
 
           <div>
