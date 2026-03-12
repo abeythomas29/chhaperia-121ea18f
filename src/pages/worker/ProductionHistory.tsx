@@ -51,6 +51,7 @@ export default function ProductionHistory() {
               <TableHead className="text-right">Rolls</TableHead>
               <TableHead className="text-right">Total</TableHead>
               <TableHead>Unit</TableHead>
+              <TableHead className="text-right">Thickness (mm)</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
