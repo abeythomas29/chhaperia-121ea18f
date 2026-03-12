@@ -58,39 +58,18 @@ export default function UserManagement() {
     if (!form.name || !form.employee_id || !form.email || !form.password) return;
     setSubmitting(true);
 
-    const { data: authData, error: authError } = await supabase.auth.signUp({
-      email: form.email,
-      password: form.password,
+    const { data, error } = await supabase.functions.invoke("create-user", {
+      body: {
+        email: form.email,
+        password: form.password,
+        name: form.name,
+        employee_id: form.employee_id,
+        role: form.role,
+      },
     });
 
-    if (authError || !authData.user) {
-      toast({ title: "Error", description: authError?.message ?? "Failed to create user", variant: "destructive" });
-      setSubmitting(false);
-      return;
-    }
-
-    const userId = authData.user.id;
-
-    const { error: profileError } = await supabase.from("profiles").insert({
-      user_id: userId,
-      name: form.name,
-      employee_id: form.employee_id,
-      username: form.email,
-    });
-
-    if (profileError) {
-      toast({ title: "Error creating profile", description: profileError.message, variant: "destructive" });
-      setSubmitting(false);
-      return;
-    }
-
-    const { error: roleError } = await supabase.from("user_roles").insert({
-      user_id: userId,
-      role: form.role,
-    });
-
-    if (roleError) {
-      toast({ title: "Error assigning role", description: roleError.message, variant: "destructive" });
+    if (error || data?.error) {
+      toast({ title: "Error", description: data?.error ?? error?.message ?? "Failed to create user", variant: "destructive" });
       setSubmitting(false);
       return;
     }
