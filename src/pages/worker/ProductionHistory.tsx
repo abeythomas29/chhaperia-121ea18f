@@ -23,17 +23,29 @@ export default function ProductionHistory() {
 
   useEffect(() => {
     if (!user) return;
-    const fetch = async () => {
-      const { data } = await supabase
+    const fetchHistory = async () => {
+      let { data, error } = await supabase
         .from("production_entries")
         .select("id, date, rolls_count, quantity_per_roll, total_quantity, unit, thickness_mm, product_codes(code), company_clients(name)")
         .eq("worker_id", user.id)
         .order("date", { ascending: false })
         .limit(200);
+
+      if (error && error.message?.includes("thickness_mm")) {
+        const fallback = await supabase
+          .from("production_entries")
+          .select("id, date, rolls_count, quantity_per_roll, total_quantity, unit, product_codes(code), company_clients(name)")
+          .eq("worker_id", user.id)
+          .order("date", { ascending: false })
+          .limit(200);
+        data = fallback.data as unknown as typeof data;
+        error = fallback.error;
+      }
+
       setEntries((data as unknown as HistoryEntry[]) ?? []);
       setLoading(false);
     };
-    fetch();
+    fetchHistory();
   }, [user]);
 
   return (

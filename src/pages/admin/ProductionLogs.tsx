@@ -89,7 +89,7 @@ export default function ProductionLogs() {
         .select("id, date, rolls_count, quantity_per_roll, total_quantity, unit, product_code_id, client_id, product_codes(code), company_clients(name), profiles:worker_id(name)")
         .order("date", { ascending: false })
         .limit(500);
-      data = fallback.data;
+      data = fallback.data as unknown as typeof data;
       error = fallback.error;
     }
 
