@@ -182,6 +182,7 @@ export default function ProductionLogs() {
         rolls_count: Number(editRolls),
         quantity_per_roll: Number(editQtyPerRoll),
         unit: editUnit,
+        thickness_mm: editThickness ? Number(editThickness) : null,
       })
       .eq("id", editEntry.id);
 
