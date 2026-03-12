@@ -75,7 +75,7 @@ export default function ProductionEntry() {
     } else {
       setSubmitted(true);
       setTimeout(() => {
-        setForm({ date: format(new Date(), "yyyy-MM-dd"), product_code_id: "", client_id: "", rolls_count: "", quantity_per_roll: "", unit: "meters" });
+        setForm({ date: format(new Date(), "yyyy-MM-dd"), product_code_id: "", client_id: "", rolls_count: "", quantity_per_roll: "", unit: "meters", thickness_mm: "" });
         setSubmitted(false);
       }, 2000);
     }
