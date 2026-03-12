@@ -62,6 +62,7 @@ export default function ProductionLogs() {
   const [editRolls, setEditRolls] = useState("");
   const [editQtyPerRoll, setEditQtyPerRoll] = useState("");
   const [editUnit, setEditUnit] = useState("meters");
+  const [editThickness, setEditThickness] = useState("");
   const [saving, setSaving] = useState(false);
 
   // Delete state
