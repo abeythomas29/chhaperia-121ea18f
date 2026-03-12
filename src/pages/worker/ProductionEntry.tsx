@@ -225,6 +225,11 @@ export default function ProductionEntry() {
           </div>
 
           <div>
+            <Label>Thickness (mm)</Label>
+            <Input type="number" min="0" step="0.01" value={form.thickness_mm} onChange={(e) => setForm({ ...form, thickness_mm: e.target.value })} placeholder="e.g. 0.25" />
+          </div>
+
+          <div>
             <Label>Unit</Label>
             <Select value={form.unit} onValueChange={(v) => setForm({ ...form, unit: v })}>
               <SelectTrigger><SelectValue /></SelectTrigger>
