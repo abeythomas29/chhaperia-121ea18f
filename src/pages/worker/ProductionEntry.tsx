@@ -67,7 +67,7 @@ export default function ProductionEntry() {
       rolls_count: Number(form.rolls_count),
       quantity_per_roll: Number(form.quantity_per_roll),
       unit: form.unit,
-      
+      thickness_mm: form.thickness_mm ? Number(form.thickness_mm) : null,
     });
 
     if (error) {
