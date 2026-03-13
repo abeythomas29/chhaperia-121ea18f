@@ -61,8 +61,14 @@ export default function UserManagement() {
 
     let userId: string | null = null;
 
-    // Try to sign up
-    const { data: authData, error: authError } = await supabase.auth.signUp({
+    const tempClient = createClient(
+      import.meta.env.VITE_SUPABASE_URL,
+      import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+      { auth: { persistSession: false, autoRefreshToken: false } }
+    );
+
+    // Try to sign up using temporary client (keeps admin session intact)
+    const { data: authData, error: authError } = await tempClient.auth.signUp({
       email: form.email,
       password: form.password,
     });
@@ -82,14 +88,7 @@ export default function UserManagement() {
           return;
         }
 
-        // Use a temporary client to sign in as the user and get their ID
-        // This doesn't affect the admin's session
-        const tempClient = createClient(
-          "https://chhaperia-supabase-proxy.chhaperia.workers.dev",
-          "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp6YnBnd2l2eHZraGFiaHB4anF0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIwMTAzMTYsImV4cCI6MjA4NzU4NjMxNn0.cIAHZMeMdCN3tadOMwQcbH-tBXXSHaoAFwBGQ4bU7xI",
-          { auth: { persistSession: false, autoRefreshToken: false } }
-        );
-        
+        // Sign in with temp client to retrieve existing auth user id
         const { data: signInData, error: signInError } = await tempClient.auth.signInWithPassword({
           email: form.email,
           password: form.password,
@@ -102,8 +101,6 @@ export default function UserManagement() {
         }
 
         userId = signInData.user.id;
-        // Sign out of temp client
-        await tempClient.auth.signOut();
       } else {
         toast({ title: "Error", description: authError.message, variant: "destructive" });
         setSubmitting(false);
@@ -112,6 +109,9 @@ export default function UserManagement() {
     } else {
       userId = authData.user?.id ?? null;
     }
+
+    // Ensure temp client session is cleaned up
+    await tempClient.auth.signOut();
 
     if (!userId) {
       toast({ title: "Error", description: "Failed to get user ID", variant: "destructive" });
