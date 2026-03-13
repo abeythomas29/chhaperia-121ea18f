@@ -86,28 +86,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const signUp = async (email: string, password: string, name: string, employeeId: string) => {
-    const { data, error } = await supabase.auth.signUp({ email, password });
+    // Pass name and employee_id as metadata — the DB trigger handles profile/role creation
+    const { error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: { name, employee_id: employeeId },
+      },
+    });
     if (error) return { error: error as Error | null };
-    
-    const userId = data.user?.id;
-    if (!userId) return { error: new Error("Signup failed") };
-
-    // Create profile
-    const { error: profileError } = await supabase.from("profiles").insert({
-      user_id: userId,
-      name,
-      employee_id: employeeId,
-      username: email,
-    });
-    if (profileError) return { error: profileError as unknown as Error };
-
-    // Assign default worker role
-    const { error: roleError } = await supabase.from("user_roles").insert({
-      user_id: userId,
-      role: "worker" as const,
-    });
-    if (roleError) return { error: roleError as unknown as Error };
-
     return { error: null };
   };
 
