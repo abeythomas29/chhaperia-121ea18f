@@ -58,41 +58,101 @@ export default function UserManagement() {
     if (!form.name || !form.employee_id || !form.email || !form.password) return;
     setSubmitting(true);
 
+    let userId: string | null = null;
+
+    // Try to sign up
     const { data: authData, error: authError } = await supabase.auth.signUp({
       email: form.email,
       password: form.password,
     });
 
-    if (authError || !authData.user) {
-      toast({ title: "Error", description: authError?.message ?? "Failed to create user", variant: "destructive" });
+    if (authError) {
+      if (authError.message?.toLowerCase().includes("already registered")) {
+        // User exists in auth but may be missing profile/role — look up via edge function
+        const { data: lookupData, error: lookupError } = await supabase.functions.invoke("admin-update-user", {
+          body: { user_id: "__lookup__", email: form.email, password: form.password },
+        });
+        // If lookup fails, we need to find the user another way
+        // Try to create profile anyway by searching existing profiles
+        const { data: existingProfile } = await supabase
+          .from("profiles")
+          .select("user_id")
+          .eq("username", form.email)
+          .maybeSingle();
+
+        if (existingProfile) {
+          toast({ title: "User already exists", description: "This user already has a profile. Check the user list.", variant: "destructive" });
+          setSubmitting(false);
+          return;
+        }
+
+        // Auth user exists but no profile — we need to get their user_id via admin API
+        const { data: adminLookup, error: adminError } = await supabase.functions.invoke("admin-lookup-user", {
+          body: { email: form.email },
+        });
+
+        if (adminError || adminLookup?.error || !adminLookup?.user_id) {
+          toast({ title: "Error", description: adminLookup?.error ?? adminError?.message ?? "Could not find existing user", variant: "destructive" });
+          setSubmitting(false);
+          return;
+        }
+
+        userId = adminLookup.user_id;
+      } else {
+        toast({ title: "Error", description: authError.message, variant: "destructive" });
+        setSubmitting(false);
+        return;
+      }
+    } else {
+      userId = authData.user?.id ?? null;
+    }
+
+    if (!userId) {
+      toast({ title: "Error", description: "Failed to get user ID", variant: "destructive" });
       setSubmitting(false);
       return;
     }
 
-    const userId = authData.user.id;
+    // Check if profile already exists
+    const { data: existingProfile } = await supabase
+      .from("profiles")
+      .select("id")
+      .eq("user_id", userId)
+      .maybeSingle();
 
-    const { error: profileError } = await supabase.from("profiles").insert({
-      user_id: userId,
-      name: form.name,
-      employee_id: form.employee_id,
-      username: form.email,
-    });
+    if (!existingProfile) {
+      const { error: profileError } = await supabase.from("profiles").insert({
+        user_id: userId,
+        name: form.name,
+        employee_id: form.employee_id,
+        username: form.email,
+      });
 
-    if (profileError) {
-      toast({ title: "Error creating profile", description: profileError.message, variant: "destructive" });
-      setSubmitting(false);
-      return;
+      if (profileError) {
+        toast({ title: "Error creating profile", description: profileError.message, variant: "destructive" });
+        setSubmitting(false);
+        return;
+      }
     }
 
-    const { error: roleError } = await supabase.from("user_roles").insert({
-      user_id: userId,
-      role: form.role,
-    });
+    // Check if role already exists
+    const { data: existingRole } = await supabase
+      .from("user_roles")
+      .select("id")
+      .eq("user_id", userId)
+      .maybeSingle();
 
-    if (roleError) {
-      toast({ title: "Error assigning role", description: roleError.message, variant: "destructive" });
-      setSubmitting(false);
-      return;
+    if (!existingRole) {
+      const { error: roleError } = await supabase.from("user_roles").insert({
+        user_id: userId,
+        role: form.role,
+      });
+
+      if (roleError) {
+        toast({ title: "Error assigning role", description: roleError.message, variant: "destructive" });
+        setSubmitting(false);
+        return;
+      }
     }
 
     toast({ title: "User created successfully" });
