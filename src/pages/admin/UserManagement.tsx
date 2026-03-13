@@ -26,13 +26,11 @@ interface UserRow {
 
 export default function UserManagement() {
   const [users, setUsers] = useState<UserRow[]>([]);
-  const [dialogOpen, setDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [resetDialogOpen, setResetDialogOpen] = useState(false);
   const [newPassword, setNewPassword] = useState("");
   const [selectedUser, setSelectedUser] = useState<UserRow | null>(null);
-  const [form, setForm] = useState({ name: "", employee_id: "", email: "", password: "", role: "worker" as AppRole });
   const [editForm, setEditForm] = useState({ name: "", employee_id: "", username: "", role: "worker" as AppRole });
   const [submitting, setSubmitting] = useState(false);
   const { toast } = useToast();
