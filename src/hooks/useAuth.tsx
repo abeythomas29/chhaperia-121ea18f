@@ -85,6 +85,32 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return { error: error as Error | null };
   };
 
+  const signUp = async (email: string, password: string, name: string, employeeId: string) => {
+    const { data, error } = await supabase.auth.signUp({ email, password });
+    if (error) return { error: error as Error | null };
+    
+    const userId = data.user?.id;
+    if (!userId) return { error: new Error("Signup failed") };
+
+    // Create profile
+    const { error: profileError } = await supabase.from("profiles").insert({
+      user_id: userId,
+      name,
+      employee_id: employeeId,
+      username: email,
+    });
+    if (profileError) return { error: profileError as unknown as Error };
+
+    // Assign default worker role
+    const { error: roleError } = await supabase.from("user_roles").insert({
+      user_id: userId,
+      role: "worker" as const,
+    });
+    if (roleError) return { error: roleError as unknown as Error };
+
+    return { error: null };
+  };
+
   const signOut = async () => {
     await supabase.auth.signOut();
     setRole(null);
