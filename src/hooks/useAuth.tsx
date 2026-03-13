@@ -92,6 +92,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const userId = data.user?.id;
     if (!userId) return { error: new Error("Signup failed") };
 
+    // Ensure we have an active session - if signUp didn't auto-set it, sign in explicitly
+    const { data: sessionData } = await supabase.auth.getSession();
+    if (!sessionData.session) {
+      const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
+      if (signInError) return { error: signInError as Error | null };
+    }
+
     // Create profile
     const { error: profileError } = await supabase.from("profiles").insert({
       user_id: userId,
