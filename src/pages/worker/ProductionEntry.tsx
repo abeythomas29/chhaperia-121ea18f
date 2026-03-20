@@ -17,12 +17,12 @@ export default function ProductionEntry() {
 
   const [productCodes, setProductCodes] = useState<{ id: string; code: string; category_id: string }[]>([]);
   const [categories, setCategories] = useState<{ id: string; name: string }[]>([]);
-  const [clients, setClients] = useState<{ id: string; name: string }[]>([]);
+  const [clients, setClients] = useState<{ id: string; name: string }[]>([]); // kept for potential future use
 
   const [form, setForm] = useState({
     date: format(new Date(), "yyyy-MM-dd"),
     product_code_id: "",
-    client_id: "",
+    client_id: "", // kept for backwards compat but not shown in form
     rolls_count: "",
     quantity_per_roll: "",
     unit: "meters",
@@ -56,12 +56,11 @@ export default function ProductionEntry() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user || !form.product_code_id || !form.client_id || !form.rolls_count || !form.quantity_per_roll) return;
+    if (!user || !form.product_code_id || !form.rolls_count || !form.quantity_per_roll) return;
     setSubmitting(true);
 
     const insertPayload: Record<string, unknown> = {
       product_code_id: form.product_code_id,
-      client_id: form.client_id,
       date: form.date,
       worker_id: user.id,
       rolls_count: Number(form.rolls_count),
@@ -195,27 +194,8 @@ export default function ProductionEntry() {
             </Select>
           </div>
 
-          <div>
-            <div className="flex items-center justify-between mb-1">
-              <Label>Client / Customer</Label>
-              <Dialog open={clientDialogOpen} onOpenChange={setClientDialogOpen}>
-                <DialogTrigger asChild>
-                  <Button type="button" variant="ghost" size="sm" className="h-6 text-xs text-secondary"><Plus className="h-3 w-3 mr-1" /> Add New</Button>
-                </DialogTrigger>
-                <DialogContent>
-                  <DialogHeader><DialogTitle>Add Client</DialogTitle></DialogHeader>
-                  <div className="space-y-4">
-                    <div><Label>Client Name</Label><Input value={newClientName} onChange={(e) => setNewClientName(e.target.value)} placeholder="Client name" /></div>
-                    <Button type="button" onClick={addClient} className="w-full bg-secondary hover:bg-secondary/90">Add</Button>
-                  </div>
-                </DialogContent>
-              </Dialog>
-            </div>
-            <Select value={form.client_id} onValueChange={(v) => setForm({ ...form, client_id: v })}>
-              <SelectTrigger><SelectValue placeholder="Select client" /></SelectTrigger>
-              <SelectContent>{clients.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}</SelectContent>
-            </Select>
-          </div>
+
+
 
           <div className="grid grid-cols-2 gap-4">
             <div>

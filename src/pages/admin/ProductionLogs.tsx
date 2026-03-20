@@ -24,9 +24,8 @@ interface LogEntry {
   unit: string;
   thickness_mm: number | null;
   product_code_id: string;
-  client_id: string;
+  client_id: string | null;
   product_codes: { code: string } | null;
-  company_clients: { name: string } | null;
   profiles: { name: string } | null;
 }
 
@@ -79,19 +78,9 @@ export default function ProductionLogs() {
     // Try with thickness_mm first; fall back without it if column doesn't exist yet
     let { data, error } = await supabase
       .from("production_entries")
-      .select("id, date, rolls_count, quantity_per_roll, total_quantity, unit, thickness_mm, product_code_id, client_id, product_codes(code), company_clients(name), profiles:worker_id(name)")
+      .select("id, date, rolls_count, quantity_per_roll, total_quantity, unit, thickness_mm, product_code_id, client_id, product_codes(code), profiles:worker_id(name)")
       .order("date", { ascending: false })
       .limit(500);
-
-    if (error && error.message?.includes("thickness_mm")) {
-      const fallback = await supabase
-        .from("production_entries")
-        .select("id, date, rolls_count, quantity_per_roll, total_quantity, unit, product_code_id, client_id, product_codes(code), company_clients(name), profiles:worker_id(name)")
-        .order("date", { ascending: false })
-        .limit(500);
-      data = fallback.data as unknown as typeof data;
-      error = fallback.error;
-    }
 
     if (error) {
       toast({ title: "Failed to load production logs", description: error.message, variant: "destructive" });
@@ -122,7 +111,6 @@ export default function ProductionLogs() {
     const matchesSearch =
       !s ||
       e.product_codes?.code?.toLowerCase().includes(s) ||
-      e.company_clients?.name?.toLowerCase().includes(s) ||
       e.profiles?.name?.toLowerCase().includes(s);
 
     const entryDate = new Date(e.date);
@@ -153,11 +141,10 @@ export default function ProductionLogs() {
 
   const exportCSV = () => {
     const rows = [
-      ["Date", "Product Code", "Client", "Production Manager", "Rolls", "Qty/Roll", "Total", "Unit", "Thickness (mm)"],
+      ["Date", "Product Code", "Production Manager", "Rolls", "Qty/Roll", "Total", "Unit", "Thickness (mm)"],
       ...filtered.map((e) => [
         e.date,
         e.product_codes?.code ?? "",
-        e.company_clients?.name ?? "",
         e.profiles?.name ?? "",
         e.rolls_count,
         e.quantity_per_roll,
@@ -180,7 +167,7 @@ export default function ProductionLogs() {
     setEditEntry(entry);
     setEditDate(entry.date);
     setEditProductCodeId(entry.product_code_id);
-    setEditClientId(entry.client_id);
+    setEditClientId(entry.client_id ?? "");
     setEditRolls(String(entry.rolls_count));
     setEditQtyPerRoll(String(entry.quantity_per_roll));
     setEditUnit(entry.unit);
@@ -320,9 +307,8 @@ export default function ProductionLogs() {
               <TableHead className="w-10">
                 <Checkbox checked={allFilteredSelected} onCheckedChange={toggleSelectAll} aria-label="Select all" />
               </TableHead>
-              <TableHead>Date</TableHead>
+      <TableHead className="text-base">Date</TableHead>
               <TableHead>Product Code</TableHead>
-              <TableHead>Client</TableHead>
               <TableHead>Production Manager</TableHead>
               <TableHead className="text-right">Rolls</TableHead>
               <TableHead className="text-right">Qty/Roll</TableHead>
@@ -335,11 +321,11 @@ export default function ProductionLogs() {
           <TableBody>
             {loading ? (
               <TableRow>
-                <TableCell colSpan={11} className="text-center py-8 text-muted-foreground">Loading...</TableCell>
+                <TableCell colSpan={10} className="text-center py-8 text-muted-foreground">Loading...</TableCell>
               </TableRow>
             ) : filtered.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={11} className="text-center py-8 text-muted-foreground">No entries found</TableCell>
+                <TableCell colSpan={10} className="text-center py-8 text-muted-foreground">No entries found</TableCell>
               </TableRow>
             ) : (
               filtered.map((e) => (
@@ -347,9 +333,8 @@ export default function ProductionLogs() {
                   <TableCell>
                     <Checkbox checked={selectedIds.has(e.id)} onCheckedChange={() => toggleSelect(e.id)} aria-label="Select row" />
                   </TableCell>
-                  <TableCell>{e.date}</TableCell>
+                  <TableCell className="text-base font-medium whitespace-nowrap">{(() => { const d = new Date(e.date); return `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getFullYear()).slice(-2)}`; })()}</TableCell>
                   <TableCell className="font-medium">{e.product_codes?.code ?? "—"}</TableCell>
-                  <TableCell>{e.company_clients?.name ?? "—"}</TableCell>
                   <TableCell>{e.profiles?.name ?? "—"}</TableCell>
                   <TableCell className="text-right">{e.rolls_count}</TableCell>
                   <TableCell className="text-right">{e.quantity_per_roll}</TableCell>
@@ -392,17 +377,6 @@ export default function ProductionLogs() {
                 <SelectContent>
                   {productCodes.map((p) => (
                     <SelectItem key={p.id} value={p.id}>{p.code}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label>Client</Label>
-              <Select value={editClientId} onValueChange={setEditClientId}>
-                <SelectTrigger><SelectValue placeholder="Select client" /></SelectTrigger>
-                <SelectContent>
-                  {clients.map((c) => (
-                    <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>

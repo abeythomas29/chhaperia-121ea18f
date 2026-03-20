@@ -9,6 +9,7 @@ import AdminLayout from "./layouts/AdminLayout";
 import WorkerLayout from "./layouts/WorkerLayout";
 import Dashboard from "./pages/admin/Dashboard";
 import ProductionLogs from "./pages/admin/ProductionLogs";
+import StockManagement from "./pages/admin/StockManagement";
 import Products from "./pages/admin/Products";
 import Clients from "./pages/admin/Clients";
 import UserManagement from "./pages/admin/UserManagement";
@@ -30,6 +31,7 @@ const App = () => (
             <Route path="/admin" element={<AdminLayout />}>
               <Route index element={<Dashboard />} />
               <Route path="logs" element={<ProductionLogs />} />
+              <Route path="stock" element={<StockManagement />} />
               <Route path="products" element={<Products />} />
               <Route path="clients" element={<Clients />} />
               <Route path="users" element={<UserManagement />} />
@@ -37,6 +39,7 @@ const App = () => (
             <Route path="/worker" element={<WorkerLayout />}>
               <Route index element={<ProductionEntry />} />
               <Route path="history" element={<ProductionHistory />} />
+              <Route path="stock" element={<StockManagement />} />
             </Route>
             <Route path="/" element={<Navigate to="/login" replace />} />
             <Route path="*" element={<NotFound />} />
