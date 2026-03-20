@@ -146,7 +146,6 @@ export default function ProductionLogs() {
         e.date,
         e.product_codes?.code ?? "",
         e.profiles?.name ?? "",
-        e.profiles?.name ?? "",
         e.rolls_count,
         e.quantity_per_roll,
         e.total_quantity ?? "",
