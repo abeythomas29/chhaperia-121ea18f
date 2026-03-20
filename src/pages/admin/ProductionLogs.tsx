@@ -157,7 +157,7 @@ export default function ProductionLogs() {
       ...filtered.map((e) => [
         e.date,
         e.product_codes?.code ?? "",
-        e.company_clients?.name ?? "",
+        e.profiles?.name ?? "",
         e.profiles?.name ?? "",
         e.rolls_count,
         e.quantity_per_roll,
