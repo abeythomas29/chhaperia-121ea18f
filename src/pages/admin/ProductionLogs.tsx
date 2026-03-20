@@ -320,9 +320,8 @@ export default function ProductionLogs() {
               <TableHead className="w-10">
                 <Checkbox checked={allFilteredSelected} onCheckedChange={toggleSelectAll} aria-label="Select all" />
               </TableHead>
-              <TableHead>Date</TableHead>
+      <TableHead className="text-base">Date</TableHead>
               <TableHead>Product Code</TableHead>
-              <TableHead>Client</TableHead>
               <TableHead>Production Manager</TableHead>
               <TableHead className="text-right">Rolls</TableHead>
               <TableHead className="text-right">Qty/Roll</TableHead>
