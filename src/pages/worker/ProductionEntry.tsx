@@ -17,7 +17,7 @@ export default function ProductionEntry() {
 
   const [productCodes, setProductCodes] = useState<{ id: string; code: string; category_id: string }[]>([]);
   const [categories, setCategories] = useState<{ id: string; name: string }[]>([]);
-  const [clients, setClients] = useState<{ id: string; name: string }[]>([]);
+  const [clients, setClients] = useState<{ id: string; name: string }[]>([]); // kept for potential future use
 
   const [form, setForm] = useState({
     date: format(new Date(), "yyyy-MM-dd"),
