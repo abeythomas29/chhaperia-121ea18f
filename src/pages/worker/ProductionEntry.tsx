@@ -61,7 +61,7 @@ export default function ProductionEntry() {
 
     const insertPayload: Record<string, unknown> = {
       product_code_id: form.product_code_id,
-      client_id: form.client_id,
+      date: form.date,
       date: form.date,
       worker_id: user.id,
       rolls_count: Number(form.rolls_count),
