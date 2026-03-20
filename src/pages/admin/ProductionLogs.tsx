@@ -168,7 +168,7 @@ export default function ProductionLogs() {
     setEditEntry(entry);
     setEditDate(entry.date);
     setEditProductCodeId(entry.product_code_id);
-    setEditClientId(entry.client_id);
+    setEditClientId(entry.client_id ?? "");
     setEditRolls(String(entry.rolls_count));
     setEditQtyPerRoll(String(entry.quantity_per_roll));
     setEditUnit(entry.unit);
