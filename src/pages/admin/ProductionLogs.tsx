@@ -122,7 +122,6 @@ export default function ProductionLogs() {
     const matchesSearch =
       !s ||
       e.product_codes?.code?.toLowerCase().includes(s) ||
-      e.company_clients?.name?.toLowerCase().includes(s) ||
       e.profiles?.name?.toLowerCase().includes(s);
 
     const entryDate = new Date(e.date);
