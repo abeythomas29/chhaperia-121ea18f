@@ -334,7 +334,7 @@ export default function ProductionLogs() {
           <TableBody>
             {loading ? (
               <TableRow>
-                <TableCell colSpan={11} className="text-center py-8 text-muted-foreground">Loading...</TableCell>
+                <TableCell colSpan={10} className="text-center py-8 text-muted-foreground">Loading...</TableCell>
               </TableRow>
             ) : filtered.length === 0 ? (
               <TableRow>
