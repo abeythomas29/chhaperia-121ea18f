@@ -39,6 +39,7 @@ const App = () => (
             <Route path="/worker" element={<WorkerLayout />}>
               <Route index element={<ProductionEntry />} />
               <Route path="history" element={<ProductionHistory />} />
+              <Route path="stock" element={<StockManagement />} />
             </Route>
             <Route path="/" element={<Navigate to="/login" replace />} />
             <Route path="*" element={<NotFound />} />

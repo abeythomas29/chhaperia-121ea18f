@@ -28,6 +28,7 @@ export default function WorkerLayout() {
   const navItems = [
     { to: "/worker", label: "New Entry", icon: ClipboardList, end: true },
     { to: "/worker/history", label: "My History", icon: History, end: false },
+    { to: "/worker/stock", label: "Stock", icon: Warehouse, end: false },
   ];
 
   return (
