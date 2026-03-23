@@ -27,6 +27,7 @@ export default function ProductionEntry() {
     quantity_per_roll: "",
     unit: "meters",
     thickness_mm: "",
+    category_id: "",
   });
 
   const [newProductCode, setNewProductCode] = useState("");
