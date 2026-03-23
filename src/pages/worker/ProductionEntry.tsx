@@ -193,7 +193,6 @@ export default function ProductionEntry() {
               <SelectTrigger><SelectValue placeholder={form.category_id ? "Select product code" : "Select a category first"} /></SelectTrigger>
               <SelectContent>{productCodes.filter(p => !form.category_id || p.category_id === form.category_id).map((p) => <SelectItem key={p.id} value={p.id}>{p.code}</SelectItem>)}</SelectContent>
             </Select>
-            </Select>
           </div>
 
 
