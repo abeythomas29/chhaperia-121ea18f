@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 export default function WorkerLayout() {
-  const { user, loading, signOut, profileName } = useAuth();
+  const { user, loading, signOut, profileName, isAdmin, isWorker } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -24,6 +24,8 @@ export default function WorkerLayout() {
   }
 
   if (!user) return <Navigate to="/login" replace />;
+  if (isAdmin) return <Navigate to="/admin" replace />;
+  if (!isWorker) return <Navigate to="/login" replace />;
 
   const navItems = [
     { to: "/worker", label: "New Entry", icon: ClipboardList, end: true },
