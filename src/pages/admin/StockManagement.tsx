@@ -232,7 +232,7 @@ export default function StockManagement() {
         <Input
           placeholder="Search by product code or client..."
           value={search}
-          onChange={(e) => setSearch(e.target.value)}
+          onChange={(e) => { setSearch(e.target.value); setInPage(1); setOutPage(1); }}
           className="pl-9"
         />
       </div>
