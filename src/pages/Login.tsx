@@ -19,6 +19,7 @@ export default function Login() {
   const [signupEmail, setSignupEmail] = useState("");
   const [signupPassword, setSignupPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [showPrivacy, setShowPrivacy] = useState(false);
   const { toast } = useToast();
 
   if (loading) {
