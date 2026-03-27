@@ -169,13 +169,14 @@ export default function Login() {
                 </p>
                 <p className="text-xs text-muted-foreground text-center mt-2">
                   By creating an account, you agree to our{" "}
-                  <button
-                    type="button"
+                  <a
+                    href="/privacy-policy"
+                    target="_blank"
+                    rel="noopener noreferrer"
                     className="underline text-primary hover:text-primary/80 transition-colors"
-                    onClick={() => setShowPrivacy(true)}
                   >
                     Privacy Policy
-                  </button>.
+                  </a>.
                 </p>
               </form>
             </TabsContent>

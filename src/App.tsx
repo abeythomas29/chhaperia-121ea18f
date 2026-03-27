@@ -17,6 +17,7 @@ import ProductionEntry from "./pages/worker/ProductionEntry";
 import ProductionHistory from "./pages/worker/ProductionHistory";
 import MyIssues from "./pages/worker/MyIssues";
 import NotFound from "./pages/NotFound";
+import PrivacyPolicy from "./pages/PrivacyPolicy";
 
 const queryClient = new QueryClient();
 
@@ -29,6 +30,7 @@ const App = () => (
         <AuthProvider>
           <Routes>
             <Route path="/login" element={<Login />} />
+            <Route path="/privacy-policy" element={<PrivacyPolicy />} />
             <Route path="/admin" element={<AdminLayout />}>
               <Route index element={<Dashboard />} />
               <Route path="logs" element={<ProductionLogs />} />
