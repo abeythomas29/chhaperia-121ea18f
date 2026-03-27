@@ -135,6 +135,16 @@ export default function Login() {
                 <p className="text-xs text-muted-foreground text-center">
                   You'll be registered as a Production Manager by default.
                 </p>
+                <p className="text-xs text-muted-foreground text-center mt-2">
+                  By creating an account, you agree to our{" "}
+                  <button
+                    type="button"
+                    className="underline text-primary hover:text-primary/80 transition-colors"
+                    onClick={() => setShowPrivacy(true)}
+                  >
+                    Privacy Policy
+                  </button>.
+                </p>
               </form>
             </TabsContent>
           </Tabs>
