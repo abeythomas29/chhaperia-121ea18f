@@ -13,7 +13,7 @@ import logo from "@/assets/logo.png";
 import { useToast } from "@/hooks/use-toast";
 
 export default function Login() {
-  const { signIn, signUp, user, role, loading } = useAuth();
+  const { signIn, signUp, signOut: authSignOut, user, role, loading, isPending, profileName } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [signupName, setSignupName] = useState("");
@@ -32,22 +32,50 @@ export default function Login() {
     );
   }
 
-  if (user && role) {
+  if (user && role && role !== "pending") {
     if (role === "worker") return <Navigate to="/worker" replace />;
     return <Navigate to="/admin" replace />;
   }
 
-  // User is authenticated but role hasn't loaded yet — brief wait, then fallback
+  // User is pending — awaiting admin role assignment
+  if (user && role === "pending") {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center bg-muted gap-6 p-4">
+        <Card className="w-full max-w-md shadow-xl border-0">
+          <CardHeader className="text-center pb-2">
+            <div className="mx-auto mb-4">
+              <img src={logo} alt="Chhaperia Cables" className="h-16 w-auto mx-auto" />
+            </div>
+            <h1 className="text-2xl font-bold text-primary">Account Pending</h1>
+          </CardHeader>
+          <CardContent className="text-center space-y-4">
+            <div className="bg-accent/50 rounded-lg p-6 space-y-2">
+              <p className="text-lg font-medium text-foreground">
+                Welcome, {profileName ?? "User"}!
+              </p>
+              <p className="text-sm text-muted-foreground">
+                Your account has been created successfully. Please wait for an administrator to review and assign your role.
+              </p>
+              <p className="text-sm text-muted-foreground">
+                You will be able to access the system once your role has been assigned.
+              </p>
+            </div>
+            <Button variant="outline" onClick={async () => { await authSignOut(); window.location.reload(); }}>
+              Sign Out
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // User is authenticated but role hasn't loaded yet — brief wait
   if (user && !role) {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center bg-background gap-4">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
         <p className="text-sm text-muted-foreground">Loading your account...</p>
-        <Button variant="outline" size="sm" onClick={async () => {
-          const { signOut } = await import("@/integrations/supabase/client").then(m => ({ signOut: () => m.supabase.auth.signOut() }));
-          await signOut();
-          window.location.reload();
-        }}>
+        <Button variant="outline" size="sm" onClick={async () => { await authSignOut(); window.location.reload(); }}>
           Sign out and try again
         </Button>
       </div>
