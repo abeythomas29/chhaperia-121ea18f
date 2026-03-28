@@ -99,13 +99,9 @@ export default function StockManagement() {
     setClients(cl ?? []);
     setProductCodes(pc ?? []);
 
-    // Build summaries keyed by product_code_id + thickness
-    const prodMap = new Map<string, { pcId: string; code: string; unit: string; thickness_mm: number | null; produced: number }>();
-    const issueMap = new Map<string, number>();
-
     // Build per-product-code totals and thickness breakdowns
     const pcTotals = new Map<string, { code: string; unit: string; produced: number }>();
-    const thicknessMap = new Map<string, Map<number | null, number>>(); // pcId -> thickness -> produced
+    const thicknessMap = new Map<string, Map<number | null, number>>();
     const issueMap = new Map<string, number>();
 
     for (const p of (prodData ?? []) as any[]) {
