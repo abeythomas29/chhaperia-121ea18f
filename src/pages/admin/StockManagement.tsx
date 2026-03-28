@@ -18,6 +18,7 @@ interface StockSummary {
   product_code_id: string;
   code: string;
   unit: string;
+  thickness_mm: number | null;
   produced: number;
   issued: number;
   available: number;
@@ -28,6 +29,7 @@ interface LedgerEntry {
   date: string;
   type: "IN" | "OUT";
   product_code: string;
+  thickness_mm: number | null;
   client_name: string | null;
   quantity: number;
   unit: string;
