@@ -18,6 +18,7 @@ interface StockSummary {
   product_code_id: string;
   code: string;
   unit: string;
+  thickness_mm: number | null;
   produced: number;
   issued: number;
   available: number;
@@ -28,6 +29,7 @@ interface LedgerEntry {
   date: string;
   type: "IN" | "OUT";
   product_code: string;
+  thickness_mm: number | null;
   client_name: string | null;
   quantity: number;
   unit: string;
@@ -73,7 +75,7 @@ export default function StockManagement() {
     // Fetch production entries (IN)
     const { data: prodData } = await supabase
       .from("production_entries")
-      .select("id, date, product_code_id, total_quantity, quantity_per_roll, rolls_count, unit, product_codes(code), profiles:worker_id(name)")
+      .select("id, date, product_code_id, total_quantity, quantity_per_roll, rolls_count, unit, thickness_mm, product_codes(code), profiles:worker_id(name)")
       .order("date", { ascending: false })
       .limit(1000);
 
@@ -92,20 +94,24 @@ export default function StockManagement() {
     setClients(cl ?? []);
     setProductCodes(pc ?? []);
 
-    // Build summaries
-    const prodMap = new Map<string, { code: string; unit: string; produced: number }>();
+    // Build summaries keyed by product_code_id + thickness
+    const prodMap = new Map<string, { pcId: string; code: string; unit: string; thickness_mm: number | null; produced: number }>();
     const issueMap = new Map<string, number>();
 
     for (const p of (prodData ?? []) as any[]) {
       const pcId = p.product_code_id;
+      const thickness = p.thickness_mm ?? null;
+      const key = `${pcId}__${thickness}`;
       const qty = p.total_quantity ?? (p.rolls_count * p.quantity_per_roll);
-      const existing = prodMap.get(pcId);
+      const existing = prodMap.get(key);
       if (existing) {
         existing.produced += Number(qty);
       } else {
-        prodMap.set(pcId, {
+        prodMap.set(key, {
+          pcId,
           code: p.product_codes?.code ?? "—",
           unit: p.unit,
+          thickness_mm: thickness != null ? Number(thickness) : null,
           produced: Number(qty),
         });
       }
@@ -113,25 +119,46 @@ export default function StockManagement() {
 
     for (const i of (issueData ?? []) as any[]) {
       const pcId = i.product_code_id;
+      // Issues don't have thickness, so group by pcId only for issue totals
       issueMap.set(pcId, (issueMap.get(pcId) ?? 0) + Number(i.quantity));
     }
 
-    const allPcIds = new Set([...prodMap.keys(), ...issueMap.keys()]);
+    // Build summary list - group by product_code + thickness
     const summaryList: StockSummary[] = [];
-    for (const pcId of allPcIds) {
-      const prod = prodMap.get(pcId);
-      const produced = prod?.produced ?? 0;
-      const issued = issueMap.get(pcId) ?? 0;
+    const pcIssuedUsed = new Map<string, number>(); // track how much issued qty is distributed
+    
+    // Sort prodMap entries by code then thickness
+    const prodEntries = Array.from(prodMap.entries()).sort((a, b) => {
+      const cmp = a[1].code.localeCompare(b[1].code);
+      if (cmp !== 0) return cmp;
+      return (a[1].thickness_mm ?? 0) - (b[1].thickness_mm ?? 0);
+    });
+
+    for (const [key, prod] of prodEntries) {
+      const totalIssued = issueMap.get(prod.pcId) ?? 0;
       summaryList.push({
-        product_code_id: pcId,
-        code: prod?.code ?? "—",
-        unit: prod?.unit ?? "meters",
-        produced,
-        issued,
-        available: produced - issued,
+        product_code_id: prod.pcId,
+        code: prod.code,
+        unit: prod.unit,
+        thickness_mm: prod.thickness_mm,
+        produced: prod.produced,
+        issued: totalIssued,
+        available: prod.produced - totalIssued,
       });
     }
-    summaryList.sort((a, b) => a.code.localeCompare(b.code));
+
+    // Deduplicate: if multiple thickness variants share the same pcId, 
+    // show issued total only on the first one to avoid double-counting display
+    const seenPcIds = new Set<string>();
+    for (const s of summaryList) {
+      if (seenPcIds.has(s.product_code_id)) {
+        s.issued = 0;
+        s.available = s.produced;
+      } else {
+        seenPcIds.add(s.product_code_id);
+      }
+    }
+
     setSummaries(summaryList);
 
     // Build ledger
@@ -142,6 +169,7 @@ export default function StockManagement() {
         date: p.date,
         type: "IN",
         product_code: p.product_codes?.code ?? "—",
+        thickness_mm: p.thickness_mm != null ? Number(p.thickness_mm) : null,
         client_name: null,
         quantity: p.total_quantity ?? (p.rolls_count * p.quantity_per_roll),
         unit: p.unit,
@@ -155,6 +183,7 @@ export default function StockManagement() {
         date: i.date,
         type: "OUT",
         product_code: i.product_codes?.code ?? "—",
+        thickness_mm: null,
         client_name: i.company_clients?.name ?? "—",
         quantity: Number(i.quantity),
         unit: i.unit,
@@ -245,12 +274,15 @@ export default function StockManagement() {
           <p className="text-muted-foreground col-span-full text-center py-8">No stock data found</p>
         ) : (
           filteredSummaries.map((s) => (
-            <Card key={s.product_code_id} className="hover:shadow-md transition-shadow">
+            <Card key={`${s.product_code_id}-${s.thickness_mm}`} className="hover:shadow-md transition-shadow">
               <CardHeader className="pb-2">
                 <CardTitle className="text-base flex items-center gap-2">
                   <Package className="h-4 w-4 text-muted-foreground" />
-                  {s.code}
-                </CardTitle>
+                   {s.code}
+                   {s.thickness_mm != null && (
+                     <Badge variant="secondary" className="text-xs ml-1">{s.thickness_mm} mm</Badge>
+                   )}
+                 </CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="grid grid-cols-3 gap-2 text-center mb-3">
@@ -269,7 +301,7 @@ export default function StockManagement() {
                     </p>
                   </div>
                 </div>
-                <p className="text-xs text-muted-foreground text-center mb-3">Unit: {s.unit}</p>
+                <p className="text-xs text-muted-foreground text-center mb-3">Unit: {s.unit}{s.thickness_mm != null ? ` • Thickness: ${s.thickness_mm} mm` : ""}</p>
                 <Button
                   variant="outline"
                   size="sm"
@@ -304,6 +336,7 @@ export default function StockManagement() {
                     <TableRow>
                       <TableHead>Date</TableHead>
                       <TableHead>Product Code</TableHead>
+                      <TableHead className="text-right">Thickness (mm)</TableHead>
                       <TableHead className="text-right">Quantity</TableHead>
                       <TableHead>Unit</TableHead>
                       <TableHead>Worker</TableHead>
@@ -312,11 +345,11 @@ export default function StockManagement() {
                   <TableBody>
                     {loading ? (
                       <TableRow>
-                        <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">Loading...</TableCell>
+                        <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">Loading...</TableCell>
                       </TableRow>
                     ) : inPaged.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">No inward entries found</TableCell>
+                        <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">No inward entries found</TableCell>
                       </TableRow>
                     ) : (
                       inPaged.map((e) => (
@@ -325,6 +358,7 @@ export default function StockManagement() {
                             {format(new Date(e.date), "dd/MM/yy")}
                           </TableCell>
                           <TableCell className="font-medium">{e.product_code}</TableCell>
+                          <TableCell className="text-right">{e.thickness_mm != null ? e.thickness_mm : "—"}</TableCell>
                           <TableCell className="text-right font-semibold text-green-600">{Number(e.quantity).toLocaleString()}</TableCell>
                           <TableCell>{e.unit}</TableCell>
                           <TableCell>{e.person ?? "—"}</TableCell>
