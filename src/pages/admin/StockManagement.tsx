@@ -532,10 +532,14 @@ export default function StockManagement() {
                 </SelectContent>
               </Select>
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-3 gap-4">
               <div className="space-y-2">
                 <Label>Quantity</Label>
                 <Input type="number" min="0" step="0.01" value={issueQuantity} onChange={(e) => setIssueQuantity(e.target.value)} placeholder="0" />
+              </div>
+              <div className="space-y-2">
+                <Label>Thickness (mm)</Label>
+                <Input type="number" min="0" step="0.01" value={issueThickness} onChange={(e) => setIssueThickness(e.target.value)} placeholder="Optional" />
               </div>
               <div className="space-y-2">
                 <Label>Unit</Label>
@@ -557,6 +561,39 @@ export default function StockManagement() {
             <Button variant="outline" onClick={() => { setIssueOpen(false); resetIssueForm(); }}>Cancel</Button>
             <Button onClick={handleIssue} disabled={issuing} className="bg-secondary hover:bg-secondary/90">
               {issuing ? "Issuing..." : "Issue Stock"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Thickness Dialog */}
+      <Dialog open={editThicknessOpen} onOpenChange={setEditThicknessOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Add Thickness</DialogTitle>
+            <DialogDescription>Set the thickness for this production entry.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="space-y-2">
+              <Label>Thickness (mm)</Label>
+              <Input type="number" min="0" step="0.01" value={editThicknessValue} onChange={(e) => setEditThicknessValue(e.target.value)} placeholder="e.g. 0.5" />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditThicknessOpen(false)}>Cancel</Button>
+            <Button disabled={editingThickness || !editThicknessValue} onClick={async () => {
+              setEditingThickness(true);
+              const { error } = await supabase.from("production_entries").update({ thickness_mm: Number(editThicknessValue) } as any).eq("id", editEntryId);
+              setEditingThickness(false);
+              if (error) {
+                toast({ title: "Error", description: error.message, variant: "destructive" });
+              } else {
+                toast({ title: "Thickness updated" });
+                setEditThicknessOpen(false);
+                fetchData();
+              }
+            }}>
+              {editingThickness ? "Saving..." : "Save"}
             </Button>
           </DialogFooter>
         </DialogContent>
