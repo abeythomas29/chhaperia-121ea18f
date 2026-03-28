@@ -14,14 +14,19 @@ import { Search, PackagePlus, ArrowDownCircle, ArrowUpCircle, Package, ChevronLe
 import { format } from "date-fns";
 import { toast } from "@/hooks/use-toast";
 
+interface ThicknessBreakdown {
+  thickness_mm: number | null;
+  produced: number;
+}
+
 interface StockSummary {
   product_code_id: string;
   code: string;
   unit: string;
-  thickness_mm: number | null;
   produced: number;
   issued: number;
   available: number;
+  thicknessBreakdown: ThicknessBreakdown[];
 }
 
 interface LedgerEntry {
