@@ -14,14 +14,19 @@ import { Search, PackagePlus, ArrowDownCircle, ArrowUpCircle, Package, ChevronLe
 import { format } from "date-fns";
 import { toast } from "@/hooks/use-toast";
 
+interface ThicknessBreakdown {
+  thickness_mm: number | null;
+  produced: number;
+}
+
 interface StockSummary {
   product_code_id: string;
   code: string;
   unit: string;
-  thickness_mm: number | null;
   produced: number;
   issued: number;
   available: number;
+  thicknessBreakdown: ThicknessBreakdown[];
 }
 
 interface LedgerEntry {
@@ -94,71 +99,57 @@ export default function StockManagement() {
     setClients(cl ?? []);
     setProductCodes(pc ?? []);
 
-    // Build summaries keyed by product_code_id + thickness
-    const prodMap = new Map<string, { pcId: string; code: string; unit: string; thickness_mm: number | null; produced: number }>();
+    // Build per-product-code totals and thickness breakdowns
+    const pcTotals = new Map<string, { code: string; unit: string; produced: number }>();
+    const thicknessMap = new Map<string, Map<number | null, number>>();
     const issueMap = new Map<string, number>();
 
     for (const p of (prodData ?? []) as any[]) {
       const pcId = p.product_code_id;
-      const thickness = p.thickness_mm ?? null;
-      const key = `${pcId}__${thickness}`;
-      const qty = p.total_quantity ?? (p.rolls_count * p.quantity_per_roll);
-      const existing = prodMap.get(key);
+      const thickness = p.thickness_mm != null ? Number(p.thickness_mm) : null;
+      const qty = Number(p.total_quantity ?? (p.rolls_count * p.quantity_per_roll));
+
+      const existing = pcTotals.get(pcId);
       if (existing) {
-        existing.produced += Number(qty);
+        existing.produced += qty;
       } else {
-        prodMap.set(key, {
-          pcId,
-          code: p.product_codes?.code ?? "—",
-          unit: p.unit,
-          thickness_mm: thickness != null ? Number(thickness) : null,
-          produced: Number(qty),
-        });
+        pcTotals.set(pcId, { code: p.product_codes?.code ?? "—", unit: p.unit, produced: qty });
       }
+
+      if (!thicknessMap.has(pcId)) thicknessMap.set(pcId, new Map());
+      const tMap = thicknessMap.get(pcId)!;
+      tMap.set(thickness, (tMap.get(thickness) ?? 0) + qty);
     }
 
     for (const i of (issueData ?? []) as any[]) {
       const pcId = i.product_code_id;
-      // Issues don't have thickness, so group by pcId only for issue totals
       issueMap.set(pcId, (issueMap.get(pcId) ?? 0) + Number(i.quantity));
     }
 
-    // Build summary list - group by product_code + thickness
+    const allPcIds = new Set([...pcTotals.keys(), ...issueMap.keys()]);
     const summaryList: StockSummary[] = [];
-    const pcIssuedUsed = new Map<string, number>(); // track how much issued qty is distributed
-    
-    // Sort prodMap entries by code then thickness
-    const prodEntries = Array.from(prodMap.entries()).sort((a, b) => {
-      const cmp = a[1].code.localeCompare(b[1].code);
-      if (cmp !== 0) return cmp;
-      return (a[1].thickness_mm ?? 0) - (b[1].thickness_mm ?? 0);
-    });
-
-    for (const [key, prod] of prodEntries) {
-      const totalIssued = issueMap.get(prod.pcId) ?? 0;
+    for (const pcId of allPcIds) {
+      const prod = pcTotals.get(pcId);
+      const produced = prod?.produced ?? 0;
+      const issued = issueMap.get(pcId) ?? 0;
+      const tMap = thicknessMap.get(pcId);
+      const breakdown: ThicknessBreakdown[] = [];
+      if (tMap) {
+        for (const [t, q] of Array.from(tMap.entries()).sort((a, b) => (a[0] ?? 0) - (b[0] ?? 0))) {
+          breakdown.push({ thickness_mm: t, produced: q });
+        }
+      }
       summaryList.push({
-        product_code_id: prod.pcId,
-        code: prod.code,
-        unit: prod.unit,
-        thickness_mm: prod.thickness_mm,
-        produced: prod.produced,
-        issued: totalIssued,
-        available: prod.produced - totalIssued,
+        product_code_id: pcId,
+        code: prod?.code ?? "—",
+        unit: prod?.unit ?? "meters",
+        produced,
+        issued,
+        available: produced - issued,
+        thicknessBreakdown: breakdown,
       });
     }
-
-    // Deduplicate: if multiple thickness variants share the same pcId, 
-    // show issued total only on the first one to avoid double-counting display
-    const seenPcIds = new Set<string>();
-    for (const s of summaryList) {
-      if (seenPcIds.has(s.product_code_id)) {
-        s.issued = 0;
-        s.available = s.produced;
-      } else {
-        seenPcIds.add(s.product_code_id);
-      }
-    }
-
+    summaryList.sort((a, b) => a.code.localeCompare(b.code));
     setSummaries(summaryList);
 
     // Build ledger
@@ -274,15 +265,12 @@ export default function StockManagement() {
           <p className="text-muted-foreground col-span-full text-center py-8">No stock data found</p>
         ) : (
           filteredSummaries.map((s) => (
-            <Card key={`${s.product_code_id}-${s.thickness_mm}`} className="hover:shadow-md transition-shadow">
+            <Card key={s.product_code_id} className="hover:shadow-md transition-shadow">
               <CardHeader className="pb-2">
                 <CardTitle className="text-base flex items-center gap-2">
                   <Package className="h-4 w-4 text-muted-foreground" />
-                   {s.code}
-                   {s.thickness_mm != null && (
-                     <Badge variant="secondary" className="text-xs ml-1">{s.thickness_mm} mm</Badge>
-                   )}
-                 </CardTitle>
+                  {s.code}
+                </CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="grid grid-cols-3 gap-2 text-center mb-3">
@@ -301,11 +289,31 @@ export default function StockManagement() {
                     </p>
                   </div>
                 </div>
-                <p className="text-xs text-muted-foreground text-center mb-3">Unit: {s.unit}{s.thickness_mm != null ? ` • Thickness: ${s.thickness_mm} mm` : ""}</p>
+                <p className="text-xs text-muted-foreground text-center mb-2">Unit: {s.unit}</p>
+
+                {/* Thickness Breakdown */}
+                {s.thicknessBreakdown.length > 0 && s.thicknessBreakdown.some(t => t.thickness_mm != null) && (
+                  <div className="mt-2 border rounded-md overflow-hidden">
+                    <div className="bg-muted px-3 py-1.5 text-xs font-medium text-muted-foreground">
+                      Thickness Breakdown
+                    </div>
+                    <div className="divide-y">
+                      {s.thicknessBreakdown.map((t) => (
+                        <div key={String(t.thickness_mm)} className="flex items-center justify-between px-3 py-1.5 text-sm">
+                          <span className="font-medium">
+                            {t.thickness_mm != null ? `${t.thickness_mm} mm` : "No thickness"}
+                          </span>
+                          <span className="font-semibold">{t.produced.toLocaleString()} {s.unit}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
                 <Button
                   variant="outline"
                   size="sm"
-                  className="w-full"
+                  className="w-full mt-3"
                   onClick={() => openIssueForProduct(s.product_code_id, s.unit)}
                 >
                   Issue to Client
