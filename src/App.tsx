@@ -13,6 +13,8 @@ import StockManagement from "./pages/admin/StockManagement";
 import Products from "./pages/admin/Products";
 import Clients from "./pages/admin/Clients";
 import UserManagement from "./pages/admin/UserManagement";
+import RawMaterials from "./pages/admin/RawMaterials";
+import ProductRecipes from "./pages/admin/ProductRecipes";
 import ProductionEntry from "./pages/worker/ProductionEntry";
 import ProductionHistory from "./pages/worker/ProductionHistory";
 import MyIssues from "./pages/worker/MyIssues";
@@ -37,12 +39,15 @@ const App = () => (
               <Route path="stock" element={<StockManagement />} />
               <Route path="products" element={<Products />} />
               <Route path="clients" element={<Clients />} />
+              <Route path="raw-materials" element={<RawMaterials />} />
+              <Route path="recipes" element={<ProductRecipes />} />
               <Route path="users" element={<UserManagement />} />
             </Route>
             <Route path="/worker" element={<WorkerLayout />}>
               <Route index element={<ProductionEntry />} />
               <Route path="history" element={<ProductionHistory />} />
               <Route path="stock" element={<StockManagement />} />
+              <Route path="raw-materials" element={<RawMaterials />} />
               <Route path="issues" element={<MyIssues />} />
             </Route>
             <Route path="/" element={<Navigate to="/login" replace />} />
