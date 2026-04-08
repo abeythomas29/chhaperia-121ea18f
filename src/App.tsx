@@ -13,6 +13,8 @@ import StockManagement from "./pages/admin/StockManagement";
 import Products from "./pages/admin/Products";
 import Clients from "./pages/admin/Clients";
 import UserManagement from "./pages/admin/UserManagement";
+import RawMaterials from "./pages/admin/RawMaterials";
+import ProductRecipes from "./pages/admin/ProductRecipes";
 import ProductionEntry from "./pages/worker/ProductionEntry";
 import ProductionHistory from "./pages/worker/ProductionHistory";
 import MyIssues from "./pages/worker/MyIssues";
