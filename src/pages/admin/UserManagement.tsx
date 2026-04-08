@@ -30,6 +30,8 @@ export default function UserManagement() {
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [resetDialogOpen, setResetDialogOpen] = useState(false);
+  const [approveDialogOpen, setApproveDialogOpen] = useState(false);
+  const [approveRole, setApproveRole] = useState<AppRole>("worker");
   const [newPassword, setNewPassword] = useState("");
   const [selectedUser, setSelectedUser] = useState<UserRow | null>(null);
   const [editForm, setEditForm] = useState({ name: "", employee_id: "", username: "", role: "worker" as AppRole });
