@@ -74,6 +74,8 @@ export default function InwardEntry() {
       setQuantity("");
       setDate(format(new Date(), "yyyy-MM-dd"));
       setLotNumber("");
+      setSupplier("");
+      setPallets("");
       setNotes("");
       setSubmitted(false);
       fetchMaterials();
