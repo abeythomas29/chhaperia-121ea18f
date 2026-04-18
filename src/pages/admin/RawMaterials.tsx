@@ -281,8 +281,10 @@ export default function RawMaterials() {
               <TableRow>
                 <TableHead>Date</TableHead>
                 <TableHead>Material</TableHead>
+                <TableHead>Supplier</TableHead>
                 <TableHead className="text-right">Quantity</TableHead>
                 <TableHead>Unit</TableHead>
+                <TableHead className="text-right">Pallets</TableHead>
                 <TableHead>Lot No.</TableHead>
                 <TableHead>Notes</TableHead>
                 <TableHead>Added By</TableHead>
@@ -290,13 +292,15 @@ export default function RawMaterials() {
             </TableHeader>
             <TableBody>
               {stockEntries.length === 0 ? (
-                <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground py-8">No stock entries yet</TableCell></TableRow>
+                <TableRow><TableCell colSpan={9} className="text-center text-muted-foreground py-8">No stock entries yet</TableCell></TableRow>
               ) : stockEntries.map((e) => (
                 <TableRow key={e.id}>
                   <TableCell>{format(new Date(e.date), "dd/MM/yy")}</TableCell>
                   <TableCell>{e.material_name}</TableCell>
+                  <TableCell>{e.supplier ?? "—"}</TableCell>
                   <TableCell className="text-right font-mono">{e.quantity.toLocaleString()}</TableCell>
                   <TableCell className="text-muted-foreground">{e.material_unit}</TableCell>
+                  <TableCell className="text-right font-mono">{e.pallets ?? "—"}</TableCell>
                   <TableCell className="font-mono text-xs">{e.lot_number ?? "—"}</TableCell>
                   <TableCell className="text-muted-foreground">{e.notes ?? "—"}</TableCell>
                   <TableCell>{e.person_name}</TableCell>
