@@ -56,6 +56,8 @@ export default function InwardEntry() {
       quantity: Number(quantity),
       date,
       lot_number: lotNumber.trim() || null,
+      supplier: supplier.trim() || null,
+      pallets: pallets ? Number(pallets) : null,
       notes: notes || null,
       added_by: user.id,
     } as any);
