@@ -191,8 +191,16 @@ export default function RawMaterials() {
                   <Input value={stockLot} onChange={(e) => setStockLot(e.target.value)} placeholder="e.g. LOT-2025-001" />
                 </div>
                 <div>
+                  <Label>Supplier / From</Label>
+                  <Input value={stockSupplier} onChange={(e) => setStockSupplier(e.target.value)} placeholder="e.g. Combined Origins Ltd" />
+                </div>
+                <div>
+                  <Label>Pallets / Pieces</Label>
+                  <Input type="number" min="0" step="1" value={stockPallets} onChange={(e) => setStockPallets(e.target.value)} placeholder="e.g. 29" />
+                </div>
+                <div>
                   <Label>Notes (optional)</Label>
-                  <Input value={stockNotes} onChange={(e) => setStockNotes(e.target.value)} placeholder="e.g. Supplier name, invoice #" />
+                  <Input value={stockNotes} onChange={(e) => setStockNotes(e.target.value)} placeholder="e.g. invoice #" />
                 </div>
                 <Button onClick={addStockEntry} className="w-full bg-secondary hover:bg-secondary/90">Add Stock</Button>
               </div>
