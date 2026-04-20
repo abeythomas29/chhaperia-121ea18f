@@ -97,6 +97,48 @@ export type Database = {
           },
         ]
       }
+      product_recipes: {
+        Row: {
+          created_at: string
+          id: string
+          product_code_id: string
+          quantity_per_unit: number
+          raw_material_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          product_code_id: string
+          quantity_per_unit?: number
+          raw_material_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          product_code_id?: string
+          quantity_per_unit?: number
+          raw_material_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_recipes_product_code_id_fkey"
+            columns: ["product_code_id"]
+            isOneToOne: false
+            referencedRelation: "product_codes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_recipes_raw_material_id_fkey"
+            columns: ["raw_material_id"]
+            isOneToOne: false
+            referencedRelation: "raw_materials"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       production_entries: {
         Row: {
           client_id: string | null
@@ -170,6 +212,7 @@ export type Database = {
           employee_id: string
           id: string
           name: string
+          requested_department: Database["public"]["Enums"]["signup_department"]
           status: string
           updated_at: string
           user_id: string
@@ -180,6 +223,7 @@ export type Database = {
           employee_id: string
           id?: string
           name: string
+          requested_department?: Database["public"]["Enums"]["signup_department"]
           status?: string
           updated_at?: string
           user_id: string
@@ -190,10 +234,137 @@ export type Database = {
           employee_id?: string
           id?: string
           name?: string
+          requested_department?: Database["public"]["Enums"]["signup_department"]
           status?: string
           updated_at?: string
           user_id?: string
           username?: string
+        }
+        Relationships: []
+      }
+      raw_material_stock_entries: {
+        Row: {
+          added_by: string
+          created_at: string
+          date: string
+          id: string
+          lot_number: string | null
+          notes: string | null
+          pallets: number | null
+          quantity: number
+          raw_material_id: string
+          supplier: string | null
+          thickness_mm: number | null
+        }
+        Insert: {
+          added_by: string
+          created_at?: string
+          date?: string
+          id?: string
+          lot_number?: string | null
+          notes?: string | null
+          pallets?: number | null
+          quantity?: number
+          raw_material_id: string
+          supplier?: string | null
+          thickness_mm?: number | null
+        }
+        Update: {
+          added_by?: string
+          created_at?: string
+          date?: string
+          id?: string
+          lot_number?: string | null
+          notes?: string | null
+          pallets?: number | null
+          quantity?: number
+          raw_material_id?: string
+          supplier?: string | null
+          thickness_mm?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "raw_material_stock_entries_added_by_fkey"
+            columns: ["added_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "raw_material_stock_entries_raw_material_id_fkey"
+            columns: ["raw_material_id"]
+            isOneToOne: false
+            referencedRelation: "raw_materials"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      raw_material_usage: {
+        Row: {
+          created_at: string
+          id: string
+          production_entry_id: string
+          quantity_used: number
+          raw_material_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          production_entry_id: string
+          quantity_used?: number
+          raw_material_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          production_entry_id?: string
+          quantity_used?: number
+          raw_material_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "raw_material_usage_production_entry_id_fkey"
+            columns: ["production_entry_id"]
+            isOneToOne: false
+            referencedRelation: "production_entries"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "raw_material_usage_raw_material_id_fkey"
+            columns: ["raw_material_id"]
+            isOneToOne: false
+            referencedRelation: "raw_materials"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      raw_materials: {
+        Row: {
+          created_at: string
+          current_stock: number
+          id: string
+          name: string
+          status: string
+          unit: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          current_stock?: number
+          id?: string
+          name: string
+          status?: string
+          unit?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          current_stock?: number
+          id?: string
+          name?: string
+          status?: string
+          unit?: string
+          updated_at?: string
         }
         Relationships: []
       }
@@ -301,7 +472,8 @@ export type Database = {
       is_admin: { Args: { _user_id: string }; Returns: boolean }
     }
     Enums: {
-      app_role: "super_admin" | "admin" | "worker"
+      app_role: "super_admin" | "admin" | "worker" | "inventory_manager"
+      signup_department: "worker" | "inventory_manager"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -429,7 +601,8 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["super_admin", "admin", "worker"],
+      app_role: ["super_admin", "admin", "worker", "inventory_manager"],
+      signup_department: ["worker", "inventory_manager"],
     },
   },
 } as const

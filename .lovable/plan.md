@@ -1,59 +1,99 @@
 
+## What’s actually causing the error
 
-## Problem Analysis
+The role change is still failing because the app is **not sending the update to the same backend/database that now contains `inventory_manager`**.
 
-The publish is failing because migration `20260314064914` tries to run `ALTER COLUMN rolls_count TYPE numeric` while the generated column `total_quantity` still depends on it. On the **Live** database, `rolls_count` is still `INTEGER` and `total_quantity` is a generated column — so this migration fails every time.
+I confirmed three important facts:
 
-The sequence in the migration file is correct (drop total_quantity first, alter type, re-add), but **Lovable Cloud applies migrations to Live on publish**, and the Live database is stuck on the older migration set (last applied: `20260312064021`). The migrations after that have never been applied to Live.
+1. **Your current database already supports `inventory_manager`**
+   - The `app_role` enum now includes:
+     - `super_admin`
+     - `admin`
+     - `worker`
+     - `inventory_manager`
 
-**About the Cloudflare proxy**: Your `client.ts` points to a different Supabase project (`zzbpgwivxvkhabh pxjqt`) via your proxy. The Lovable Cloud backend (`eezbgxbbgaqifgcxxbun`) is a separate database. The publish error is on the Lovable Cloud database — not your production proxy. Your app at runtime uses the proxy, so this Lovable Cloud schema drift is the root cause of the publish blocker.
+2. **The failing request is going through a hardcoded custom proxy**
+   - `src/integrations/supabase/client.ts` currently forces:
+     - a hardcoded `PROXY_URL`
+     - a hardcoded `FALLBACK_ANON_KEY`
+   - The failed network request went to:
+     - `https://chhaperia-supabase-proxy.chhaperia.workers.dev/rest/v1/user_roles?...`
 
-## Fix Plan
+3. **That proxy/backend still rejects `inventory_manager`**
+   - The actual response was:
+     - `invalid input value for enum app_role: "inventory_manager"`
+   - So the browser is talking to a backend where the enum is still old, or the proxy is pointed at a different project.
 
-### Step 1: Fix the broken migration file
+## Why it fails when changing Production Manager to Inventory Manager
 
-Rewrite `supabase/migrations/20260314064914_bdad2890-0244-4a47-8160-5de8fa696278.sql` to handle the generated column dependency correctly by wrapping it in a conditional check:
+When you edit the user and save, this page runs:
 
-```sql
--- Drop generated column first, then alter type, then re-add
-ALTER TABLE public.production_entries DROP COLUMN IF EXISTS total_quantity;
-ALTER TABLE public.production_entries ALTER COLUMN rolls_count TYPE numeric USING rolls_count::numeric;
-ALTER TABLE public.production_entries ADD COLUMN total_quantity numeric GENERATED ALWAYS AS (rolls_count * quantity_per_roll) STORED;
+- `src/pages/admin/UserManagement.tsx`
+
+It sends:
+- `PATCH user_roles`
+- body: `{ "role": "inventory_manager" }`
+
+That code is fine.
+
+The failure happens because the request goes through the custom proxy configured here:
+
+- `src/integrations/supabase/client.ts`
+
+That file currently uses the proxy instead of the project environment URL, so even though this project’s database schema is updated, the request is likely hitting an older or mismatched backend.
+
+## How we should fix it
+
+### Recommended fix
+Update `src/integrations/supabase/client.ts` so the app uses the project’s real environment variables instead of forcing the old proxy/fallback key.
+
+### Implementation steps
+1. Remove the hardcoded proxy-first client configuration.
+2. Use:
+   - `VITE_SUPABASE_URL`
+   - `VITE_SUPABASE_ANON_KEY`
+3. Keep the normal generated client setup only.
+4. Re-test the user role edit flow on `/admin/users`.
+5. Verify that changing `abey@chhaperia.com` from `worker` to `inventory_manager` succeeds.
+6. Verify login redirect for an Inventory Manager account goes to the inventory portal.
+
+## Files involved
+
+### Must change
+- `src/integrations/supabase/client.ts`
+
+### Should verify after fix
+- `src/pages/admin/UserManagement.tsx`
+- `src/hooks/useAuth.tsx`
+- `src/pages/Login.tsx`
+- `src/App.tsx`
+
+## Technical details
+
+```text
+Current flow:
+Browser -> hardcoded proxy URL -> old/mismatched backend -> enum error
+
+Correct flow:
+Browser -> project env URL/key -> current backend schema -> role update succeeds
 ```
 
-The only change is adding `IF EXISTS` to the DROP to make it idempotent. The original file already has the correct order (drop, alter, add) — but the error suggests the Live database may be running these statements differently. Let me verify by checking if the migration file content matches what we see.
+The current client file is effectively overriding the proper environment-based connection:
 
-Actually, re-reading the error and the migration file: the file **does** drop `total_quantity` first. The error says "cannot alter type of a column used by a generated column" which means the DROP didn't execute or there's a transactional rollback issue.
-
-The real fix: the migration needs `DROP COLUMN IF EXISTS` to be safe, and we should verify the SQL is syntactically valid for the Live Postgres version. The statements look correct though.
-
-**Alternative approach**: Since Live is far behind (only has migrations up to `20260312064021`), and the migration file already has the correct order, the issue might be that the migration is being parsed/applied differently. The safest fix is to consolidate the problematic migration.
-
-### Step 1: Update migration file to be fully idempotent
-
-Edit `supabase/migrations/20260314064914_bdad2890-0244-4a47-8160-5de8fa696278.sql`:
-```sql
-DO $$
-BEGIN
-  -- Drop generated column if it exists
-  IF EXISTS (SELECT 1 FROM information_schema.columns 
-             WHERE table_schema='public' AND table_name='production_entries' AND column_name='total_quantity') THEN
-    ALTER TABLE public.production_entries DROP COLUMN total_quantity;
-  END IF;
-  
-  -- Change rolls_count to numeric
-  ALTER TABLE public.production_entries ALTER COLUMN rolls_count TYPE numeric USING rolls_count::numeric;
-  
-  -- Re-add generated column
-  ALTER TABLE public.production_entries ADD COLUMN total_quantity numeric GENERATED ALWAYS AS (rolls_count * quantity_per_roll) STORED;
-END $$;
+```text
+createClient(PROXY_URL || supabaseUrl, FALLBACK_ANON_KEY, ...)
 ```
 
-This wraps everything in a DO block so it runs as a single transaction with proper ordering.
+Because `PROXY_URL` is a non-empty string, it always wins.
 
-### Step 2: Similarly update migration `20260320093159` to be idempotent
+## Expected result after fix
 
-Add `IF NOT EXISTS` / conditional checks for the `stock_issues` table and `client_id` nullable change, since Live may not have these yet.
+You should then be able to change a user from:
+- Production Manager (`worker`)
+to
+- Inventory Manager (`inventory_manager`)
 
-That is the complete fix — no other files need changing. The Cloudflare proxy setup is unrelated to the publish error; the error is purely about Lovable Cloud's own database schema sync.
+without the enum error.
 
+## Note
+There is also a separate console warning about `SelectContent` refs and dialog descriptions, but that is **not** the reason the role update fails. The role failure is a backend target mismatch caused by the hardcoded proxy client setup.

@@ -12,6 +12,7 @@ import "./lib/i18n"; // Import i18n configuration
 import Login from "./pages/Login";
 import AdminLayout from "./layouts/AdminLayout";
 import WorkerLayout from "./layouts/WorkerLayout";
+import InventoryManagerLayout from "./layouts/InventoryManagerLayout";
 import Dashboard from "./pages/admin/Dashboard";
 import ProductionLogs from "./pages/admin/ProductionLogs";
 import StockManagement from "./pages/admin/StockManagement";
@@ -19,9 +20,13 @@ import Products from "./pages/admin/Products";
 import Clients from "./pages/admin/Clients";
 import UserManagement from "./pages/admin/UserManagement";
 import BackupRestore from "./pages/admin/BackupRestore";
+import RawMaterials from "./pages/admin/RawMaterials";
 import ProductionEntry from "./pages/worker/ProductionEntry";
 import ProductionHistory from "./pages/worker/ProductionHistory";
 import MyIssues from "./pages/worker/MyIssues";
+import InwardEntry from "./pages/inventory/InwardEntry";
+import InventoryView from "./pages/inventory/InventoryView";
+import InwardHistory from "./pages/inventory/InwardHistory";
 import NotFound from "./pages/NotFound";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
 
@@ -69,12 +74,14 @@ const AppContent = () => {
             <Route path="products" element={<Products />} />
             <Route path="clients" element={<Clients />} />
             <Route path="users" element={<UserManagement />} />
+            <Route path="inventory" element={<RawMaterials />} />
             <Route path="backup" element={<BackupRestore />} />
           </Route>
           <Route path="/worker" element={<WorkerLayout />}>
             <Route index element={<ProductionEntry />} />
             <Route path="history" element={<ProductionHistory />} />
             <Route path="stock" element={<StockManagement />} />
+            <Route path="inventory" element={<RawMaterials />} />
             <Route path="issues" element={<MyIssues />} />
           </Route>
           <Route path="/" element={<Navigate to="/login" replace />} />

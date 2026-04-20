@@ -5,7 +5,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Pencil, Trash2, KeyRound } from "lucide-react";
+import { Pencil, Trash2, KeyRound, UserCheck } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -13,6 +14,19 @@ import { useToast } from "@/hooks/use-toast";
 import type { Database } from "@/integrations/supabase/types";
 
 type AppRole = Database["public"]["Enums"]["app_role"];
+type SignupDepartment = Database["public"]["Enums"]["signup_department"];
+
+const departmentLabels: Record<SignupDepartment, string> = {
+  worker: "Production Manager",
+  inventory_manager: "Inventory Manager",
+};
+
+const roleLabels: Record<AppRole, string> = {
+  worker: "Production Manager",
+  inventory_manager: "Inventory Manager",
+  admin: "Admin",
+  super_admin: "Super Admin",
+};
 
 interface UserRow {
   id: string;
@@ -22,6 +36,7 @@ interface UserRow {
   status: string;
   user_id: string;
   role?: AppRole;
+  requested_department: SignupDepartment;
 }
 
 export default function UserManagement() {
@@ -29,6 +44,8 @@ export default function UserManagement() {
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [resetDialogOpen, setResetDialogOpen] = useState(false);
+  const [approveDialogOpen, setApproveDialogOpen] = useState(false);
+  const [approveRole, setApproveRole] = useState<AppRole>("worker");
   const [newPassword, setNewPassword] = useState("");
   const [selectedUser, setSelectedUser] = useState<UserRow | null>(null);
   const [editForm, setEditForm] = useState({ name: "", employee_id: "", username: "", role: "worker" as AppRole });
@@ -83,7 +100,7 @@ export default function UserManagement() {
     if (isNewRole) {
       const { error: roleError } = await supabase
         .from("user_roles")
-        .insert({ user_id: selectedUser.user_id, role: editForm.role });
+        .insert({ user_id: selectedUser.user_id, role: editForm.role } as any);
       if (roleError) {
         toast({ title: "Error assigning role", description: roleError.message, variant: "destructive" });
         setSubmitting(false);
@@ -92,7 +109,7 @@ export default function UserManagement() {
     } else {
       const { error: roleError } = await supabase
         .from("user_roles")
-        .update({ role: editForm.role })
+        .update({ role: editForm.role } as any)
         .eq("user_id", selectedUser.user_id);
       if (roleError) {
         toast({ title: "Error updating role", description: roleError.message, variant: "destructive" });
@@ -162,11 +179,69 @@ export default function UserManagement() {
     fetchUsers();
   };
 
+  const pendingUsers = users.filter((u) => !u.role);
+  const approvedUsers = users.filter((u) => !!u.role);
+
+  const openApprove = (user: UserRow) => {
+    setSelectedUser(user);
+    setApproveRole(user.requested_department);
+    setApproveDialogOpen(true);
+  };
+
+  const approveUser = async () => {
+    if (!selectedUser) return;
+    setSubmitting(true);
+    const { error } = await supabase
+      .from("user_roles")
+      .insert({ user_id: selectedUser.user_id, role: approveRole } as any);
+    if (error) {
+      toast({ title: "Error approving user", description: error.message, variant: "destructive" });
+      setSubmitting(false);
+      return;
+    }
+    toast({ title: `${selectedUser.name} approved as ${roleLabels[approveRole]}` });
+    setApproveDialogOpen(false);
+    setSelectedUser(null);
+    setSubmitting(false);
+    fetchUsers();
+  };
+
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">User Management</h1>
-      </div>
+    <div className="space-y-6">
+      <h1 className="text-2xl font-bold">User Management</h1>
+
+      {/* Pending Approval Section */}
+      {pendingUsers.length > 0 && (
+        <Card className="border-amber-300 bg-amber-50 dark:bg-amber-950/20 dark:border-amber-700">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-lg flex items-center gap-2">
+              <UserCheck className="h-5 w-5 text-amber-600" />
+              Pending Approvals ({pendingUsers.length})
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              {pendingUsers.map((u) => (
+                <div key={u.id} className="flex items-center justify-between p-3 bg-background rounded-lg border">
+                  <div>
+                    <p className="font-medium">{u.name}</p>
+                    <p className="text-sm text-muted-foreground">Employee ID: {u.employee_id} · {u.username}</p>
+                    <p className="text-sm text-muted-foreground">Requested department: {departmentLabels[u.requested_department]}</p>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button size="sm" variant="default" onClick={() => openApprove(u)}>
+                      Approve
+                    </Button>
+                    <Button size="sm" variant="destructive" onClick={() => openDelete(u)}>
+                      Reject
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       <div className="border rounded-lg">
         <Table>
@@ -181,14 +256,14 @@ export default function UserManagement() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {users.map((u) => (
+            {approvedUsers.map((u) => (
               <TableRow key={u.id}>
                 <TableCell className="font-medium">{u.name}</TableCell>
                 <TableCell>{u.employee_id}</TableCell>
                 <TableCell>{u.username}</TableCell>
                 <TableCell>
                   {u.role ? (
-                    <Badge variant="outline">{u.role === "worker" ? "Production Manager" : u.role}</Badge>
+                    <Badge variant="outline">{u.role === "worker" ? "Production Manager" : u.role === "inventory_manager" ? "Inventory Manager" : u.role}</Badge>
                   ) : (
                     <Badge variant="destructive">Pending Approval</Badge>
                   )}
@@ -233,10 +308,11 @@ export default function UserManagement() {
               <Select value={editForm.role} onValueChange={(v) => setEditForm({ ...editForm, role: v as AppRole })}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="worker">Production Manager</SelectItem>
-                  <SelectItem value="admin">Admin</SelectItem>
-                  <SelectItem value="super_admin">Super Admin</SelectItem>
-                </SelectContent>
+                   <SelectItem value="worker">Production Manager</SelectItem>
+                   <SelectItem value="inventory_manager">Inventory Manager</SelectItem>
+                   <SelectItem value="admin">Admin</SelectItem>
+                   <SelectItem value="super_admin">Super Admin</SelectItem>
+                 </SelectContent>
               </Select>
             </div>
             <Button onClick={updateUser} disabled={submitting} className="w-full bg-secondary hover:bg-secondary/90">Save Changes</Button>
@@ -281,6 +357,33 @@ export default function UserManagement() {
             </div>
             <Button onClick={resetPassword} disabled={submitting} className="w-full bg-secondary hover:bg-secondary/90">
               Reset Password
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Approve Dialog */}
+      <Dialog open={approveDialogOpen} onOpenChange={setApproveDialogOpen}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Approve User</DialogTitle></DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            Assign a role to <strong>{selectedUser?.name}</strong> to grant them access.
+          </p>
+          <div className="space-y-4">
+            <div>
+              <Label>Role</Label>
+              <Select value={approveRole} onValueChange={(v) => setApproveRole(v as AppRole)}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                   <SelectItem value="worker">Production Manager</SelectItem>
+                   <SelectItem value="inventory_manager">Inventory Manager</SelectItem>
+                   <SelectItem value="admin">Admin</SelectItem>
+                   <SelectItem value="super_admin">Super Admin</SelectItem>
+                 </SelectContent>
+             </Select>
+             </div>
+             <Button onClick={approveUser} disabled={submitting} className="w-full">
+              Approve & Assign Role
             </Button>
           </div>
         </DialogContent>

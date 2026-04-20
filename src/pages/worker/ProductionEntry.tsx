@@ -7,11 +7,24 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Plus, CheckCircle, Loader2 } from "lucide-react";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Plus, CheckCircle, Loader2, Trash2, ChevronDown, Package } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { saveOfflineEntry } from "@/lib/offlineSync";
 import { useTranslation } from "react-i18next";
+
+interface MaterialUsageRow {
+  raw_material_id: string;
+  quantity_used: string;
+}
+
+interface RawMaterial {
+  id: string;
+  name: string;
+  unit: string;
+  current_stock: number;
+}
 
 export default function ProductionEntry() {
   const { user } = useAuth();
@@ -21,6 +34,7 @@ export default function ProductionEntry() {
   const [productCodes, setProductCodes] = useState<{ id: string; code: string; category_id: string }[]>([]);
   const [categories, setCategories] = useState<{ id: string; name: string }[]>([]);
   const [clients, setClients] = useState<{ id: string; name: string }[]>([]);
+  const [rawMaterials, setRawMaterials] = useState<RawMaterial[]>([]);
 
   const [selectedCategory, setSelectedCategory] = useState("");
   const [form, setForm] = useState({
@@ -43,6 +57,10 @@ export default function ProductionEntry() {
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
 
+  // Optional raw material usage
+  const [materialUsage, setMaterialUsage] = useState<MaterialUsageRow[]>([]);
+  const [materialsOpen, setMaterialsOpen] = useState(false);
+
   const fetchData = async () => {
     if (!navigator.onLine) {
       const cachedCodes = localStorage.getItem("cached_product_codes");
@@ -54,10 +72,11 @@ export default function ProductionEntry() {
       return;
     }
 
-    const [codesRes, catsRes, clientsRes] = await Promise.all([
+    const [codesRes, catsRes, clientsRes, matsRes] = await Promise.all([
       supabase.from("product_codes").select("id, code, category_id").eq("status", "active").order("code"),
       supabase.from("product_categories").select("id, name").eq("status", "active").order("name"),
       supabase.from("company_clients").select("id, name").eq("status", "active").order("name"),
+      supabase.from("raw_materials").select("id, name, unit, current_stock").eq("status", "active").order("name"),
     ]);
 
     const fetchedCodes = codesRes.data ?? [];
@@ -67,6 +86,7 @@ export default function ProductionEntry() {
     setProductCodes(fetchedCodes);
     setCategories(fetchedCats);
     setClients(fetchedClients);
+    setRawMaterials(matsRes.data ?? []);
 
     localStorage.setItem("cached_product_codes", JSON.stringify(fetchedCodes));
     localStorage.setItem("cached_product_categories", JSON.stringify(fetchedCats));
@@ -75,15 +95,14 @@ export default function ProductionEntry() {
 
   useEffect(() => { fetchData(); }, []);
 
-  // Filter product codes by selected category
+  const totalQuantity = (Number(form.rolls_count) || 0) * (Number(form.quantity_per_roll) || 0);
+
   const filteredProductCodes = selectedCategory
     ? productCodes.filter((p) => p.category_id === selectedCategory)
     : productCodes;
 
-  // Reset product code when category changes
   const handleCategoryChange = (catId: string) => {
     setSelectedCategory(catId);
-    // Clear product code if it doesn't belong to new category
     if (form.product_code_id) {
       const current = productCodes.find((p) => p.id === form.product_code_id);
       if (current && current.category_id !== catId) {
@@ -92,7 +111,22 @@ export default function ProductionEntry() {
     }
   };
 
-  const totalQuantity = (Number(form.rolls_count) || 0) * (Number(form.quantity_per_roll) || 0);
+  // Material usage helpers
+  const addMaterialRow = () => {
+    setMaterialUsage((prev) => [...prev, { raw_material_id: "", quantity_used: "" }]);
+  };
+
+  const updateMaterialRow = (index: number, field: keyof MaterialUsageRow, value: string) => {
+    setMaterialUsage((prev) => prev.map((row, i) => i === index ? { ...row, [field]: value } : row));
+  };
+
+  const removeMaterialRow = (index: number) => {
+    setMaterialUsage((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const usedMaterialIds = materialUsage.map((r) => r.raw_material_id).filter(Boolean);
+  const getAvailableMaterials = (currentId: string) =>
+    rawMaterials.filter((m) => m.id === currentId || !usedMaterialIds.includes(m.id));
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -123,19 +157,20 @@ export default function ProductionEntry() {
       return;
     }
 
+    let entry: { id: string } | null = null;
     try {
-      const { error } = await supabase.from("production_entries").insert(payload);
+      const { data, error } = await supabase
+        .from("production_entries")
+        .insert(payload as any)
+        .select("id")
+        .single();
 
       if (error) {
         toast({ title: "Error", description: error.message, variant: "destructive" });
-      } else {
-        setSubmitted(true);
-        setTimeout(() => {
-          setForm({ date: format(new Date(), "yyyy-MM-dd"), product_code_id: "", client_id: "", rolls_count: "", quantity_per_roll: "", thickness: "", unit: "meters" });
-          setSelectedCategory("");
-          setSubmitted(false);
-        }, 2000);
+        setSubmitting(false);
+        return;
       }
+      entry = data;
     } catch (err: any) {
       // Fallback for network error during fetch
       saveOfflineEntry(payload);
@@ -146,7 +181,32 @@ export default function ProductionEntry() {
         setSelectedCategory("");
         setSubmitted(false);
       }, 2000);
+      setSubmitting(false);
+      return;
     }
+
+    // Insert optional raw material usage rows
+    const validUsage = materialUsage.filter((r) => r.raw_material_id && Number(r.quantity_used) > 0);
+    if (validUsage.length > 0 && entry) {
+      const usageRows = validUsage.map((r) => ({
+        production_entry_id: entry!.id,
+        raw_material_id: r.raw_material_id,
+        quantity_used: Number(r.quantity_used),
+      }));
+      const { error: usageError } = await supabase.from("raw_material_usage").insert(usageRows);
+      if (usageError) {
+        toast({ title: "Warning", description: "Production saved but material usage failed: " + usageError.message, variant: "destructive" });
+      }
+    }
+
+    setSubmitted(true);
+    setTimeout(() => {
+      setForm({ date: format(new Date(), "yyyy-MM-dd"), product_code_id: "", client_id: "", rolls_count: "", quantity_per_roll: "", unit: "meters", thickness_mm: "" });
+      setSelectedCategory("");
+      setMaterialUsage([]);
+      setMaterialsOpen(false);
+      setSubmitted(false);
+    }, 2000);
     setSubmitting(false);
   };
 
@@ -158,10 +218,7 @@ export default function ProductionEntry() {
     setCategoryDialogOpen(false);
     setNewCategoryName("");
     await fetchData();
-    if (data) {
-      setNewProductCat(data.id);
-      setSelectedCategory(data.id);
-    }
+    if (data) { setNewProductCat(data.id); setSelectedCategory(data.id); }
   };
 
   const addProductCode = async () => {
@@ -173,10 +230,7 @@ export default function ProductionEntry() {
     setNewProductCode("");
     setNewProductCat("");
     await fetchData();
-    if (data) {
-      setSelectedCategory(data.category_id);
-      setForm((f) => ({ ...f, product_code_id: data.id }));
-    }
+    if (data) { setSelectedCategory(data.category_id); setForm((f) => ({ ...f, product_code_id: data.id })); }
   };
 
   const addClient = async () => {
@@ -325,6 +379,69 @@ export default function ProductionEntry() {
             <p className="text-sm text-muted-foreground">{t('total_quantity')}</p>
             <p className="text-3xl font-bold text-primary">{totalQuantity.toLocaleString()} <span className="text-lg font-normal text-muted-foreground">{form.unit === 'meters' ? t('meters') : form.unit === 'kg' ? t('kilograms') : form.unit}</span></p>
           </div>
+
+          {/* Optional Raw Material Usage */}
+          <Collapsible open={materialsOpen} onOpenChange={setMaterialsOpen}>
+            <CollapsibleTrigger asChild>
+              <Button type="button" variant="outline" className="w-full justify-between">
+                <span className="flex items-center gap-2">
+                  <Package className="h-4 w-4" />
+                  Raw Materials Used (Optional)
+                  {materialUsage.length > 0 && (
+                    <span className="text-xs bg-secondary text-secondary-foreground rounded-full px-2 py-0.5">
+                      {materialUsage.length}
+                    </span>
+                  )}
+                </span>
+                <ChevronDown className={`h-4 w-4 transition-transform ${materialsOpen ? "rotate-180" : ""}`} />
+              </Button>
+            </CollapsibleTrigger>
+            <CollapsibleContent className="mt-3 space-y-3">
+              {materialUsage.map((row, idx) => {
+                const mat = rawMaterials.find((m) => m.id === row.raw_material_id);
+                return (
+                  <div key={idx} className="flex items-end gap-2">
+                    <div className="flex-1">
+                      {idx === 0 && <Label className="text-xs">Material</Label>}
+                      <Select value={row.raw_material_id} onValueChange={(v) => updateMaterialRow(idx, "raw_material_id", v)}>
+                        <SelectTrigger className="h-9">
+                          <SelectValue placeholder="Select material" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {getAvailableMaterials(row.raw_material_id).map((m) => (
+                            <SelectItem key={m.id} value={m.id}>{m.name} ({m.unit})</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      {mat && (
+                        <p className="text-xs text-muted-foreground mt-0.5">
+                          Stock: {mat.current_stock.toLocaleString()} {mat.unit}
+                        </p>
+                      )}
+                    </div>
+                    <div className="w-24">
+                      {idx === 0 && <Label className="text-xs">Qty</Label>}
+                      <Input
+                        type="number"
+                        min="0"
+                        step="0.001"
+                        className="h-9 text-right"
+                        value={row.quantity_used}
+                        onChange={(e) => updateMaterialRow(idx, "quantity_used", e.target.value)}
+                        placeholder="0"
+                      />
+                    </div>
+                    <Button type="button" variant="ghost" size="icon" className="h-9 w-9 shrink-0" onClick={() => removeMaterialRow(idx)}>
+                      <Trash2 className="h-4 w-4 text-destructive" />
+                    </Button>
+                  </div>
+                );
+              })}
+              <Button type="button" variant="outline" size="sm" onClick={addMaterialRow} className="w-full">
+                <Plus className="h-4 w-4 mr-1" /> Add Material
+              </Button>
+            </CollapsibleContent>
+          </Collapsible>
 
           <Button type="submit" disabled={submitting} className="w-full h-16 bg-secondary hover:bg-secondary/90 text-xl py-6 rounded-xl">
             {submitting ? <Loader2 className="mr-2 h-6 w-6 animate-spin" /> : null}
