@@ -417,6 +417,44 @@ export default function RawMaterials() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Edit Stock Entry Dialog */}
+      <Dialog open={editEntryOpen} onOpenChange={setEditEntryOpen}>
+        <DialogContent className="max-h-[90vh] overflow-y-auto">
+          <DialogHeader><DialogTitle>Edit Stock Entry</DialogTitle></DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label>Raw Material</Label>
+              <Select value={eMaterialId} onValueChange={setEMaterialId}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>{materials.map((m) => <SelectItem key={m.id} value={m.id}>{m.name} ({m.unit})</SelectItem>)}</SelectContent>
+              </Select>
+            </div>
+            <div><Label>Quantity</Label><Input type="number" min="0" step="0.01" value={eQty} onChange={(e) => setEQty(e.target.value)} /></div>
+            <div><Label>Date</Label><Input type="date" value={eDate} onChange={(e) => setEDate(e.target.value)} /></div>
+            <div><Label>Lot Number</Label><Input value={eLot} onChange={(e) => setELot(e.target.value)} /></div>
+            <div><Label>Supplier / From</Label><Input value={eSupplier} onChange={(e) => setESupplier(e.target.value)} /></div>
+            <div><Label>Pallets / Pieces</Label><Input type="number" min="0" step="1" value={ePallets} onChange={(e) => setEPallets(e.target.value)} /></div>
+            <div><Label>Thickness (mm)</Label><Input type="number" min="0" step="0.001" value={eThickness} onChange={(e) => setEThickness(e.target.value)} /></div>
+            <div><Label>Notes</Label><Input value={eNotes} onChange={(e) => setENotes(e.target.value)} /></div>
+            <Button onClick={saveEntryEdit} className="w-full bg-secondary hover:bg-secondary/90">Save Changes</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Stock Entry Confirm */}
+      <AlertDialog open={!!deleteEntryId} onOpenChange={(open) => !open && setDeleteEntryId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Stock Entry?</AlertDialogTitle>
+            <AlertDialogDescription>This will remove the inward record. The raw material's current stock will not be auto-adjusted.</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDeleteEntry} className="bg-destructive text-destructive-foreground">Delete</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
