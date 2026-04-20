@@ -301,7 +301,7 @@ export default function RawMaterials() {
             </TableHeader>
             <TableBody>
               {stockEntries.length === 0 ? (
-                <TableRow><TableCell colSpan={9} className="text-center text-muted-foreground py-8">No stock entries yet</TableCell></TableRow>
+                <TableRow><TableCell colSpan={10} className="text-center text-muted-foreground py-8">No stock entries yet</TableCell></TableRow>
               ) : stockEntries.map((e) => (
                 <TableRow key={e.id}>
                   <TableCell>{format(new Date(e.date), "dd/MM/yy")}</TableCell>
