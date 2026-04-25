@@ -21,6 +21,8 @@ import MyIssues from "./pages/worker/MyIssues";
 import InwardEntry from "./pages/inventory/InwardEntry";
 import InventoryView from "./pages/inventory/InventoryView";
 import InwardHistory from "./pages/inventory/InwardHistory";
+import SalesEntry from "./pages/inventory/SalesEntry";
+import SalesHistory from "./pages/inventory/SalesHistory";
 import NotFound from "./pages/NotFound";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
 
@@ -44,6 +46,7 @@ const App = () => (
               <Route path="clients" element={<Clients />} />
               <Route path="inventory" element={<RawMaterials />} />
               <Route path="users" element={<UserManagement />} />
+              <Route path="sales" element={<SalesHistory />} />
             </Route>
             <Route path="/worker" element={<WorkerLayout />}>
               <Route index element={<ProductionEntry />} />
@@ -56,6 +59,8 @@ const App = () => (
               <Route index element={<InwardEntry />} />
               <Route path="view" element={<InventoryView />} />
               <Route path="history" element={<InwardHistory />} />
+              <Route path="sales" element={<SalesEntry />} />
+              <Route path="sales-history" element={<SalesHistory />} />
             </Route>
             <Route path="/" element={<Navigate to="/login" replace />} />
             <Route path="*" element={<NotFound />} />
