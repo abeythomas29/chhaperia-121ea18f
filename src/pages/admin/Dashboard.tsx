@@ -2,12 +2,22 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ClipboardList, TrendingUp, Download, Loader2, Package } from "lucide-react";
+import { ClipboardList, TrendingUp, Download, Loader2, Package, Trash2 } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { format, subDays } from "date-fns";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { toast } from "@/hooks/use-toast";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface EntryDetail {
   id: string;
@@ -31,18 +41,50 @@ export default function Dashboard() {
   const [weekEntries, setWeekEntries] = useState<EntryDetail[]>([]);
   const [backingUp, setBackingUp] = useState(false);
   const [materials, setMaterials] = useState<{ id: string; name: string; unit: string; current_stock: number }[]>([]);
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
+  const [deleting, setDeleting] = useState(false);
+
+  const fetchMaterials = async () => {
+    const { data } = await supabase
+      .from("raw_materials")
+      .select("id, name, unit, current_stock")
+      .eq("status", "active");
+    const shuffled = [...(data ?? [])].sort(() => Math.random() - 0.5);
+    setMaterials(shuffled);
+  };
 
   useEffect(() => {
-    const fetchMaterials = async () => {
-      const { data } = await supabase
-        .from("raw_materials")
-        .select("id, name, unit, current_stock")
-        .eq("status", "active");
-      const shuffled = [...(data ?? [])].sort(() => Math.random() - 0.5);
-      setMaterials(shuffled);
-    };
     fetchMaterials();
   }, []);
+
+  const confirmDelete = async () => {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    const { data: recipes } = await supabase
+      .from("product_recipes")
+      .select("id")
+      .eq("raw_material_id", deleteTarget.id)
+      .limit(1);
+    if (recipes && recipes.length > 0) {
+      toast({
+        title: "Cannot delete",
+        description: "This material is used in product recipes. Remove it from recipes first.",
+        variant: "destructive",
+      });
+      setDeleting(false);
+      setDeleteTarget(null);
+      return;
+    }
+    const { error } = await supabase.from("raw_materials").delete().eq("id", deleteTarget.id);
+    setDeleting(false);
+    setDeleteTarget(null);
+    if (error) {
+      toast({ title: "Delete failed", description: error.message, variant: "destructive" });
+      return;
+    }
+    toast({ title: "Material deleted" });
+    await fetchMaterials();
+  };
 
   useEffect(() => {
     const fetchStats = async () => {
@@ -301,12 +343,13 @@ export default function Dashboard() {
                 <TableHead>Material</TableHead>
                 <TableHead>Unit</TableHead>
                 <TableHead className="text-right">Current Stock</TableHead>
+                <TableHead className="text-right">Action</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {materials.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={3} className="text-center py-6 text-muted-foreground">No materials found</TableCell>
+                  <TableCell colSpan={4} className="text-center py-6 text-muted-foreground">No materials found</TableCell>
                 </TableRow>
               ) : (
                 materials.map((m) => (
@@ -316,6 +359,16 @@ export default function Dashboard() {
                     <TableCell className={`text-right font-mono ${m.current_stock <= 0 ? "text-muted-foreground" : ""}`}>
                       {Number(m.current_stock).toLocaleString()}
                     </TableCell>
+                    <TableCell className="text-right">
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                        onClick={() => setDeleteTarget({ id: m.id, name: m.name })}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </TableCell>
                   </TableRow>
                 ))
               )}
@@ -323,6 +376,27 @@ export default function Dashboard() {
           </Table>
         </CardContent>
       </Card>
+
+      <AlertDialog open={deleteTarget !== null} onOpenChange={(open) => !open && setDeleteTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete raw material?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete <span className="font-semibold">{deleteTarget?.name}</span>. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => { e.preventDefault(); confirmDelete(); }}
+              disabled={deleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deleting ? "Deleting…" : "Delete"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
