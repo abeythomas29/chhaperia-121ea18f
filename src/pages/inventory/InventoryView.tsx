@@ -4,13 +4,23 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Package, Search, ShoppingCart, Plus, Boxes } from "lucide-react";
+import { Package, Search, ShoppingCart, Plus, Boxes, Pencil, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface RawMaterial {
   id: string;
@@ -37,6 +47,12 @@ export default function InventoryView() {
   const [newName, setNewName] = useState("");
   const [newUnit, setNewUnit] = useState("kg");
   const [adding, setAdding] = useState(false);
+  const [editTarget, setEditTarget] = useState<RawMaterial | null>(null);
+  const [editName, setEditName] = useState("");
+  const [editUnit, setEditUnit] = useState("kg");
+  const [savingEdit, setSavingEdit] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<RawMaterial | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   const fetchMaterials = async () => {
     const { data } = await supabase.from("raw_materials").select("*").order("name");
@@ -91,6 +107,52 @@ export default function InventoryView() {
     setAddOpen(false);
     setNewName("");
     setNewUnit("kg");
+    await fetchMaterials();
+  };
+
+  const openEdit = (m: RawMaterial) => {
+    setEditTarget(m);
+    setEditName(m.name);
+    setEditUnit(m.unit);
+  };
+
+  const saveEdit = async () => {
+    if (!editTarget || !editName.trim()) return;
+    setSavingEdit(true);
+    const { error } = await supabase
+      .from("raw_materials")
+      .update({ name: editName.trim(), unit: editUnit })
+      .eq("id", editTarget.id);
+    setSavingEdit(false);
+    if (error) { toast({ title: "Update failed", description: error.message, variant: "destructive" }); return; }
+    toast({ title: "Material updated" });
+    setEditTarget(null);
+    await fetchMaterials();
+  };
+
+  const confirmDelete = async () => {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    const { data: recipes } = await supabase
+      .from("product_recipes")
+      .select("id")
+      .eq("raw_material_id", deleteTarget.id)
+      .limit(1);
+    if (recipes && recipes.length > 0) {
+      toast({
+        title: "Cannot delete",
+        description: "This material is used in product recipes. Remove it from recipes first.",
+        variant: "destructive",
+      });
+      setDeleting(false);
+      setDeleteTarget(null);
+      return;
+    }
+    const { error } = await supabase.from("raw_materials").delete().eq("id", deleteTarget.id);
+    setDeleting(false);
+    setDeleteTarget(null);
+    if (error) { toast({ title: "Delete failed", description: error.message, variant: "destructive" }); return; }
+    toast({ title: "Material deleted" });
     await fetchMaterials();
   };
 
@@ -173,14 +235,27 @@ export default function InventoryView() {
                   <TableCell className="text-right font-mono">{m.current_stock.toLocaleString()}</TableCell>
                   <TableCell><Badge variant={m.status === "active" ? "default" : "secondary"}>{m.status}</Badge></TableCell>
                   <TableCell className="text-right">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      disabled={m.status !== "active" || m.current_stock <= 0}
-                      onClick={() => navigate("/inventory/sales", { state: { materialId: m.id, unit: m.unit } })}
-                    >
-                      <ShoppingCart className="h-3 w-3 mr-1" /> Sell
-                    </Button>
+                    <div className="flex justify-end gap-1">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        disabled={m.status !== "active" || m.current_stock <= 0}
+                        onClick={() => navigate("/inventory/sales", { state: { materialId: m.id, unit: m.unit } })}
+                      >
+                        <ShoppingCart className="h-3 w-3 mr-1" /> Sell
+                      </Button>
+                      <Button size="sm" variant="ghost" onClick={() => openEdit(m)}>
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                        onClick={() => setDeleteTarget(m)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </TableCell>
                 </TableRow>
               ))}
@@ -234,6 +309,55 @@ export default function InventoryView() {
           </Table>
         </CardContent>
       </Card>
+
+      <Dialog open={editTarget !== null} onOpenChange={(open) => !open && setEditTarget(null)}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Edit Raw Material</DialogTitle></DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label>Name</Label>
+              <Input value={editName} onChange={(e) => setEditName(e.target.value)} />
+            </div>
+            <div>
+              <Label>Unit</Label>
+              <Select value={editUnit} onValueChange={setEditUnit}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="kg">Kilograms (kg)</SelectItem>
+                  <SelectItem value="meters">Meters</SelectItem>
+                  <SelectItem value="rolls">Rolls</SelectItem>
+                  <SelectItem value="pieces">Pieces</SelectItem>
+                  <SelectItem value="liters">Liters</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <Button onClick={saveEdit} disabled={savingEdit || !editName.trim()} className="w-full bg-secondary hover:bg-secondary/90">
+              {savingEdit ? "Saving…" : "Save Changes"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <AlertDialog open={deleteTarget !== null} onOpenChange={(open) => !open && setDeleteTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete raw material?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete <span className="font-semibold">{deleteTarget?.name}</span>. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => { e.preventDefault(); confirmDelete(); }}
+              disabled={deleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deleting ? "Deleting…" : "Delete"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
