@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ClipboardList, TrendingUp, Download, Loader2 } from "lucide-react";
+import { ClipboardList, TrendingUp, Download, Loader2, Package } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { format, subDays } from "date-fns";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -30,6 +30,19 @@ export default function Dashboard() {
   const [todayEntries, setTodayEntries] = useState<EntryDetail[]>([]);
   const [weekEntries, setWeekEntries] = useState<EntryDetail[]>([]);
   const [backingUp, setBackingUp] = useState(false);
+  const [materials, setMaterials] = useState<{ id: string; name: string; unit: string; current_stock: number }[]>([]);
+
+  useEffect(() => {
+    const fetchMaterials = async () => {
+      const { data } = await supabase
+        .from("raw_materials")
+        .select("id, name, unit, current_stock")
+        .eq("status", "active");
+      const shuffled = [...(data ?? [])].sort(() => Math.random() - 0.5);
+      setMaterials(shuffled);
+    };
+    fetchMaterials();
+  }, []);
 
   useEffect(() => {
     const fetchStats = async () => {
@@ -271,6 +284,43 @@ export default function Dashboard() {
               </BarChart>
             </ResponsiveContainer>
           </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Package className="h-5 w-5 text-secondary" />
+            Raw Materials Inventory ({materials.length})
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Material</TableHead>
+                <TableHead>Unit</TableHead>
+                <TableHead className="text-right">Current Stock</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {materials.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={3} className="text-center py-6 text-muted-foreground">No materials found</TableCell>
+                </TableRow>
+              ) : (
+                materials.map((m) => (
+                  <TableRow key={m.id}>
+                    <TableCell className="font-medium">{m.name}</TableCell>
+                    <TableCell>{m.unit}</TableCell>
+                    <TableCell className={`text-right font-mono ${m.current_stock <= 0 ? "text-muted-foreground" : ""}`}>
+                      {Number(m.current_stock).toLocaleString()}
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
         </CardContent>
       </Card>
     </div>
