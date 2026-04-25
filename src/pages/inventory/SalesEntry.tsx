@@ -56,12 +56,16 @@ export default function SalesEntry() {
 
   // Prefill when navigated from inventory view with a material
   useEffect(() => {
-    const state = location.state as { materialId?: string; unit?: string } | null;
+    const state = location.state as { materialId?: string; productId?: string; unit?: string } | null;
     if (state?.materialId) {
       setTab("raw_material");
       setMaterialId(state.materialId);
       if (state.unit) setUnit(state.unit);
-      // clear state so reload doesn't re-prefill
+      navigate(location.pathname, { replace: true });
+    } else if (state?.productId) {
+      setTab("finished_product");
+      setProductId(state.productId);
+      if (state.unit) setUnit(state.unit);
       navigate(location.pathname, { replace: true });
     }
   }, [location, navigate]);
