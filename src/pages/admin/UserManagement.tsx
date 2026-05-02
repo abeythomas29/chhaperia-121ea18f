@@ -19,11 +19,13 @@ type SignupDepartment = Database["public"]["Enums"]["signup_department"];
 const departmentLabels: Record<SignupDepartment, string> = {
   worker: "Production Manager",
   inventory_manager: "Inventory Manager",
+  slitting_manager: "Slitting Manager",
 };
 
 const roleLabels: Record<AppRole, string> = {
   worker: "Production Manager",
   inventory_manager: "Inventory Manager",
+  slitting_manager: "Slitting Manager",
   admin: "Admin",
   super_admin: "Super Admin",
 };
