@@ -43,6 +43,10 @@ export default function ProductionEntry() {
     unit: "meters",
     thickness_mm: "",
     notes: "",
+    swelling_speed: "",
+    swelling_height: "",
+    tensile_strength: "",
+    elongation: "",
   });
 
   const [newProductCode, setNewProductCode] = useState("");
@@ -126,6 +130,10 @@ export default function ProductionEntry() {
     if (form.notes.trim()) {
       insertPayload.notes = form.notes.trim();
     }
+    if (form.swelling_speed) insertPayload.swelling_speed = Number(form.swelling_speed);
+    if (form.swelling_height) insertPayload.swelling_height = Number(form.swelling_height);
+    if (form.tensile_strength) insertPayload.tensile_strength = Number(form.tensile_strength);
+    if (form.elongation) insertPayload.elongation = Number(form.elongation);
 
     const { data: entry, error } = await supabase
       .from("production_entries")
@@ -155,7 +163,7 @@ export default function ProductionEntry() {
 
     setSubmitted(true);
     setTimeout(() => {
-      setForm({ date: format(new Date(), "yyyy-MM-dd"), product_code_id: "", client_id: "", rolls_count: "", quantity_per_roll: "", unit: "meters", thickness_mm: "", notes: "" });
+      setForm({ date: format(new Date(), "yyyy-MM-dd"), product_code_id: "", client_id: "", rolls_count: "", quantity_per_roll: "", unit: "meters", thickness_mm: "", notes: "", swelling_speed: "", swelling_height: "", tensile_strength: "", elongation: "" });
       setSelectedCategory("");
       setMaterialUsage([]);
       setMaterialsOpen(false);
@@ -321,6 +329,40 @@ export default function ProductionEntry() {
              placeholder="e.g. Single coated, Double coated, etc."
            />
          </div>
+
+          {/* Lab Report Data */}
+          {selectedCategory && (() => {
+            const catName = categories.find(c => c.id === selectedCategory)?.name?.toLowerCase() || "";
+            const isWaterBlocking = catName.includes("water block");
+            return (
+              <div className="border border-border rounded-lg p-4 space-y-3">
+                <Label className="text-sm font-semibold">Lab Report (Optional)</Label>
+                {isWaterBlocking ? (
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label className="text-xs">Swelling Speed</Label>
+                      <Input type="number" min="0" step="0.01" value={form.swelling_speed} onChange={(e) => setForm({ ...form, swelling_speed: e.target.value })} placeholder="e.g. 5.2" />
+                    </div>
+                    <div>
+                      <Label className="text-xs">Swelling Height</Label>
+                      <Input type="number" min="0" step="0.01" value={form.swelling_height} onChange={(e) => setForm({ ...form, swelling_height: e.target.value })} placeholder="e.g. 12.5" />
+                    </div>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label className="text-xs">Tensile Strength</Label>
+                      <Input type="number" min="0" step="0.01" value={form.tensile_strength} onChange={(e) => setForm({ ...form, tensile_strength: e.target.value })} placeholder="e.g. 45.0" />
+                    </div>
+                    <div>
+                      <Label className="text-xs">Elongation</Label>
+                      <Input type="number" min="0" step="0.01" value={form.elongation} onChange={(e) => setForm({ ...form, elongation: e.target.value })} placeholder="e.g. 15.0" />
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })()}
 
           {/* Optional Raw Material Usage */}
           <Collapsible open={materialsOpen} onOpenChange={setMaterialsOpen}>
