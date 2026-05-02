@@ -145,6 +145,7 @@ export type Database = {
           created_at: string
           date: string
           id: string
+          notes: string | null
           product_code_id: string
           quantity_per_roll: number
           rolls_count: number
@@ -159,6 +160,7 @@ export type Database = {
           created_at?: string
           date?: string
           id?: string
+          notes?: string | null
           product_code_id: string
           quantity_per_roll: number
           rolls_count: number
@@ -173,6 +175,7 @@ export type Database = {
           created_at?: string
           date?: string
           id?: string
+          notes?: string | null
           product_code_id?: string
           quantity_per_roll?: number
           rolls_count?: number

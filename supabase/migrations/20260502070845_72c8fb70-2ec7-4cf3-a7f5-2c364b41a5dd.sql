@@ -1,0 +1,1 @@
+ALTER TABLE public.production_entries ADD COLUMN notes text;
