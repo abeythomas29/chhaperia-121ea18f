@@ -19,10 +19,9 @@ const signupSchema = z.object({
   employeeId: z.string().trim().min(1, "Employee ID is required").max(50, "Employee ID is too long"),
   email: z.string().trim().email("Enter a valid email address").max(255, "Email is too long"),
   password: z.string().min(6, "Password must be at least 6 characters").max(72, "Password is too long"),
-  requestedDepartment: z.enum(["worker", "inventory_manager"], {
-    // @ts-ignore extending enum
+  requestedDepartment: z.enum(["worker", "inventory_manager", "slitting_manager"], {
     required_error: "Please select a department",
-  }) as any,
+  }),
 });
 
 export default function Login() {
