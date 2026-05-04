@@ -24,7 +24,7 @@ export default function SlittingManagerLayout() {
   }
 
   if (!user) return <Navigate to="/login" replace />;
-  if (isAdmin) return <Navigate to="/admin" replace />;
+  if (!isSlittingManager && isAdmin) return <Navigate to="/admin" replace />;
   if (!isSlittingManager) return <Navigate to="/login" replace />;
 
   const navItems = [
