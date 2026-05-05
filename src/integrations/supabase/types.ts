@@ -150,6 +150,7 @@ export type Database = {
           product_code_id: string
           quantity_per_roll: number
           rolls_count: number
+          surface_resistance: number | null
           swelling_height: number | null
           swelling_speed: number | null
           tensile_strength: number | null
@@ -169,6 +170,7 @@ export type Database = {
           product_code_id: string
           quantity_per_roll: number
           rolls_count: number
+          surface_resistance?: number | null
           swelling_height?: number | null
           swelling_speed?: number | null
           tensile_strength?: number | null
@@ -188,6 +190,7 @@ export type Database = {
           product_code_id?: string
           quantity_per_roll?: number
           rolls_count?: number
+          surface_resistance?: number | null
           swelling_height?: number | null
           swelling_speed?: number | null
           tensile_strength?: number | null
