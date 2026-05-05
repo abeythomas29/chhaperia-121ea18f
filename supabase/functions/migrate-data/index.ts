@@ -39,10 +39,12 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { email, password, step } = await req.json();
+    const body = await req.json();
+    const { step } = body;
 
     // Step 1: Export data from old project
     if (step === "export") {
+      const { email, password } = body;
       const oldClient = createClient(OLD_URL, OLD_ANON_KEY);
       const { data: authData, error: authError } = await oldClient.auth.signInWithPassword({
         email,
@@ -87,7 +89,7 @@ Deno.serve(async (req) => {
 
     // Step 2: Import data into new project
     if (step === "import") {
-      const { data: importData, userIdMap } = await req.json();
+      const { data: importData, userIdMap } = body;
       const newClient = createClient(NEW_URL, NEW_SERVICE_KEY, {
         auth: { autoRefreshToken: false, persistSession: false },
       });
@@ -156,7 +158,7 @@ Deno.serve(async (req) => {
 
     // Step 3: Create users in new project from profiles data
     if (step === "create_users") {
-      const { profiles: profilesList, userRoles } = await req.json();
+      const { profiles: profilesList, userRoles } = body;
       const newClient = createClient(NEW_URL, NEW_SERVICE_KEY, {
         auth: { autoRefreshToken: false, persistSession: false },
       });
