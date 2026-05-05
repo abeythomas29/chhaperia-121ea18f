@@ -44,8 +44,12 @@ Deno.serve(async (req) => {
       _user_id: callerId,
       _role: "super_admin",
     });
-    if (!isAdmin) {
-      return new Response(JSON.stringify({ error: "Only super admins can reset passwords" }), {
+    const { data: isAdminRole } = await callerClient.rpc("has_role", {
+      _user_id: callerId,
+      _role: "admin",
+    });
+    if (!isAdmin && !isAdminRole) {
+      return new Response(JSON.stringify({ error: "Only admins can reset passwords" }), {
         status: 403,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -66,7 +70,8 @@ Deno.serve(async (req) => {
     });
 
     if (error) {
-      return new Response(JSON.stringify({ error: error.message }), {
+      console.error("Password reset error:", JSON.stringify(error));
+      return new Response(JSON.stringify({ error: error.message, status: error.status, code: error.code }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
