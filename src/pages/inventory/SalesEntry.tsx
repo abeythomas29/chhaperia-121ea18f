@@ -96,19 +96,18 @@ export default function SalesEntry() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user || !clientId || !quantity || !pricePerUnit) {
-      if (!useManualClient && !clientId) {
-        toast({ title: "Missing fields", description: "Please select a client or enter a name manually", variant: "destructive" });
-        return;
-      }
-      if (useManualClient && !manualClientName.trim()) {
-        toast({ title: "Missing fields", description: "Please enter the client name", variant: "destructive" });
-        return;
-      }
-      if (!quantity || !pricePerUnit) {
-        toast({ title: "Missing fields", description: "Quantity and price are required", variant: "destructive" });
-        return;
-      }
+    if (!user) return;
+    if (!useManualClient && !clientId) {
+      toast({ title: "Missing fields", description: "Please select a client or enter a name manually", variant: "destructive" });
+      return;
+    }
+    if (useManualClient && !manualClientName.trim()) {
+      toast({ title: "Missing fields", description: "Please enter the client name", variant: "destructive" });
+      return;
+    }
+    if (!quantity || !pricePerUnit) {
+      toast({ title: "Missing fields", description: "Quantity and price are required", variant: "destructive" });
+      return;
     }
     if (tab === "raw_material" && !materialId) {
       toast({ title: "Select a material", variant: "destructive" });
