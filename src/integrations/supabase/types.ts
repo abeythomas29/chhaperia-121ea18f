@@ -145,10 +145,13 @@ export type Database = {
           created_at: string
           date: string
           elongation: number | null
+          gsm: number | null
           id: string
+          lab_report_included: boolean | null
           notes: string | null
           product_code_id: string
           quantity_per_roll: number
+          raw_material_included: boolean | null
           rolls_count: number
           surface_resistance: number | null
           swelling_height: number | null
@@ -165,10 +168,13 @@ export type Database = {
           created_at?: string
           date?: string
           elongation?: number | null
+          gsm?: number | null
           id?: string
+          lab_report_included?: boolean | null
           notes?: string | null
           product_code_id: string
           quantity_per_roll: number
+          raw_material_included?: boolean | null
           rolls_count: number
           surface_resistance?: number | null
           swelling_height?: number | null
@@ -185,10 +191,13 @@ export type Database = {
           created_at?: string
           date?: string
           elongation?: number | null
+          gsm?: number | null
           id?: string
+          lab_report_included?: boolean | null
           notes?: string | null
           product_code_id?: string
           quantity_per_roll?: number
+          raw_material_included?: boolean | null
           rolls_count?: number
           surface_resistance?: number | null
           swelling_height?: number | null
@@ -503,6 +512,50 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["user_id"]
+          },
+        ]
+      }
+      slitting_returns: {
+        Row: {
+          created_at: string
+          date: string
+          id: string
+          notes: string | null
+          returned_by: string
+          returned_quantity: number
+          slitting_entry_id: string
+          unit: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          date?: string
+          id?: string
+          notes?: string | null
+          returned_by: string
+          returned_quantity?: number
+          slitting_entry_id: string
+          unit?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          date?: string
+          id?: string
+          notes?: string | null
+          returned_by?: string
+          returned_quantity?: number
+          slitting_entry_id?: string
+          unit?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "slitting_returns_slitting_entry_id_fkey"
+            columns: ["slitting_entry_id"]
+            isOneToOne: false
+            referencedRelation: "slitting_entries"
+            referencedColumns: ["id"]
           },
         ]
       }
