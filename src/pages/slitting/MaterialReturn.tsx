@@ -19,10 +19,7 @@ interface SlittingRow {
   cut_quantity_produced: number;
   unit: string;
   thickness_mm: number | null;
-  gsm: number | null;
   notes: string | null;
-  slitting_manager_id: string | null;
-  created_at: string | null;
   product_codes: { code: string } | null;
 }
 
@@ -40,60 +37,68 @@ interface ReturnGroup {
 }
 
 function buildGroups(rows: SlittingRow[]): ReturnGroup[] {
-  const groups = new Map<string, SlittingRow[]>();
-  const ungrouped: SlittingRow[] = [];
+  const sigOf = (r: SlittingRow) =>
+    `${r.date}|${r.product_codes?.code ?? ""}|${r.unit}|${r.thickness_mm ?? ""}`;
+  const sourceTag = (r: SlittingRow) => {
+    const m = r.notes?.match(/Source:\s*([^|\n]+)/);
+    return m ? m[1].trim() : null;
+  };
 
+  // Phase 1: group by Source: tag when present
+  const tagged = new Map<string, SlittingRow[]>();
+  const untagged: SlittingRow[] = [];
   for (const r of rows) {
-    const m = r.notes?.match(/Source:\s*([^|]+)/);
-    if (m) {
-      const sig = `${r.date}|${r.product_codes?.code ?? ""}|${r.slitting_manager_id ?? ""}|${r.unit}|${r.thickness_mm ?? ""}|${m[1].trim()}`;
-      if (!groups.has(sig)) groups.set(sig, []);
-      groups.get(sig)!.push(r);
+    const tag = sourceTag(r);
+    if (tag) {
+      const k = `${sigOf(r)}|${tag}`;
+      if (!tagged.has(k)) tagged.set(k, []);
+      tagged.get(k)!.push(r);
     } else {
-      ungrouped.push(r);
+      untagged.push(r);
     }
   }
 
-  // Fallback grouping for rows without "Source:" marker
-  ungrouped.sort((a, b) => {
-    if (a.date !== b.date) return a.date < b.date ? 1 : -1;
-    const ac = a.created_at ?? a.id;
-    const bc = b.created_at ?? b.id;
-    return ac < bc ? -1 : ac > bc ? 1 : 0;
-  });
-
-  const buckets = new Map<string, SlittingRow[][]>();
-  for (const r of ungrouped) {
-    const sig = `${r.date}|${r.product_codes?.code ?? ""}|${r.slitting_manager_id ?? ""}|${r.unit}|${r.thickness_mm ?? ""}|${r.gsm ?? ""}`;
-    if (!buckets.has(sig)) buckets.set(sig, []);
-    const list = buckets.get(sig)!;
-    if (Number(r.source_quantity) > 0 || list.length === 0) {
-      list.push([r]);
-    } else {
-      list[list.length - 1].push(r);
-    }
+  // Phase 2: for untagged rows, attach zero-source rows to nearest same-sig row with source > 0.
+  // Rows arrive newest-first; within the same date keep stable order.
+  const bySig = new Map<string, SlittingRow[]>();
+  for (const r of untagged) {
+    const k = sigOf(r);
+    if (!bySig.has(k)) bySig.set(k, []);
+    bySig.get(k)!.push(r);
   }
 
   const result: ReturnGroup[] = [];
   const pushGroup = (key: string, items: SlittingRow[]) => {
     if (!items.length) return;
-    const first = items[0];
+    const anchor = items.find((i) => Number(i.source_quantity) > 0) ?? items[0];
     result.push({
       key,
       ids: items.map((i) => i.id),
-      firstId: first.id,
-      date: first.date,
-      productCode: first.product_codes?.code ?? "—",
-      unit: first.unit,
-      thickness_mm: first.thickness_mm,
+      firstId: anchor.id,
+      date: anchor.date,
+      productCode: anchor.product_codes?.code ?? "—",
+      unit: anchor.unit,
+      thickness_mm: anchor.thickness_mm,
       issued: items.reduce((s, i) => s + Number(i.source_quantity ?? 0), 0),
       produced: items.reduce((s, i) => s + Number(i.cut_quantity_produced ?? 0), 0),
       count: items.length,
     });
   };
 
-  groups.forEach((items, k) => pushGroup(k, items));
-  buckets.forEach((lists, k) => lists.forEach((items, i) => pushGroup(`${k}#${i}`, items)));
+  tagged.forEach((items, k) => pushGroup(k, items));
+
+  bySig.forEach((list, k) => {
+    // Build buckets: each bucket starts at a source>0 row; zero rows attach to current bucket.
+    const buckets: SlittingRow[][] = [];
+    for (const r of list) {
+      if (Number(r.source_quantity) > 0 || buckets.length === 0) {
+        buckets.push([r]);
+      } else {
+        buckets[buckets.length - 1].push(r);
+      }
+    }
+    buckets.forEach((items, i) => pushGroup(`${k}#${i}`, items));
+  });
 
   result.sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0));
   return result;
@@ -111,11 +116,12 @@ export default function MaterialReturn() {
   const load = async () => {
     if (!user) return;
 
-    // Drop legacy cache to avoid showing ungrouped data
+    // Drop legacy cache keys
     localStorage.removeItem("cache_mr_slitting_entries");
+    localStorage.removeItem("cache_mr_slitting_entries_v2");
 
     // Instantly load from localStorage cache
-    const cachedEntries = localStorage.getItem("cache_mr_slitting_entries_v2");
+    const cachedEntries = localStorage.getItem("cache_mr_slitting_entries_v3");
     const cachedReturns = localStorage.getItem("cache_mr_returns");
     if (cachedEntries) {
       try {
@@ -134,16 +140,20 @@ export default function MaterialReturn() {
     }
 
     try {
-      const { data: entryData } = await supabase
+      const { data: entryData, error: entryErr } = await supabase
         .from("slitting_entries")
-        .select("id, date, source_quantity, cut_quantity_produced, unit, thickness_mm, gsm, notes, slitting_manager_id, created_at, product_codes(code)")
+        .select("id, date, source_quantity, cut_quantity_produced, unit, thickness_mm, notes, product_codes(code)")
         .order("date", { ascending: false })
-        .order("created_at", { ascending: true })
         .limit(300);
-      
-      const newEntries = (entryData as unknown as SlittingRow[]) ?? [];
-      setEntries(newEntries);
-      localStorage.setItem("cache_mr_slitting_entries_v2", JSON.stringify(newEntries));
+
+      if (entryErr) {
+        console.error("slitting_entries query error", entryErr);
+        toast({ title: "Could not load slitting entries", description: entryErr.message, variant: "destructive" });
+      } else {
+        const newEntries = (entryData as unknown as SlittingRow[]) ?? [];
+        setEntries(newEntries);
+        localStorage.setItem("cache_mr_slitting_entries_v3", JSON.stringify(newEntries));
+      }
 
       const { data: retData } = await supabase
         .from("slitting_returns" as any)
@@ -157,6 +167,7 @@ export default function MaterialReturn() {
       localStorage.setItem("cache_mr_returns", JSON.stringify(sums));
     } catch (err) {
       console.error("Error querying material return online", err);
+      toast({ title: "Error loading data", description: String((err as any)?.message ?? err), variant: "destructive" });
     } finally {
       setLoading(false);
     }
