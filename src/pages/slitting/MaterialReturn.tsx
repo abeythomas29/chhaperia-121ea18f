@@ -18,7 +18,85 @@ interface SlittingRow {
   source_quantity: number;
   cut_quantity_produced: number;
   unit: string;
+  thickness_mm: number | null;
+  gsm: number | null;
+  notes: string | null;
+  slitting_manager_id: string | null;
+  created_at: string | null;
   product_codes: { code: string } | null;
+}
+
+interface ReturnGroup {
+  key: string;
+  ids: string[];
+  firstId: string;
+  date: string;
+  productCode: string;
+  unit: string;
+  thickness_mm: number | null;
+  issued: number;
+  produced: number;
+  count: number;
+}
+
+function buildGroups(rows: SlittingRow[]): ReturnGroup[] {
+  const groups = new Map<string, SlittingRow[]>();
+  const ungrouped: SlittingRow[] = [];
+
+  for (const r of rows) {
+    const m = r.notes?.match(/Source:\s*([^|]+)/);
+    if (m) {
+      const sig = `${r.date}|${r.product_codes?.code ?? ""}|${r.slitting_manager_id ?? ""}|${r.unit}|${r.thickness_mm ?? ""}|${m[1].trim()}`;
+      if (!groups.has(sig)) groups.set(sig, []);
+      groups.get(sig)!.push(r);
+    } else {
+      ungrouped.push(r);
+    }
+  }
+
+  // Fallback grouping for rows without "Source:" marker
+  ungrouped.sort((a, b) => {
+    if (a.date !== b.date) return a.date < b.date ? 1 : -1;
+    const ac = a.created_at ?? a.id;
+    const bc = b.created_at ?? b.id;
+    return ac < bc ? -1 : ac > bc ? 1 : 0;
+  });
+
+  const buckets = new Map<string, SlittingRow[][]>();
+  for (const r of ungrouped) {
+    const sig = `${r.date}|${r.product_codes?.code ?? ""}|${r.slitting_manager_id ?? ""}|${r.unit}|${r.thickness_mm ?? ""}|${r.gsm ?? ""}`;
+    if (!buckets.has(sig)) buckets.set(sig, []);
+    const list = buckets.get(sig)!;
+    if (Number(r.source_quantity) > 0 || list.length === 0) {
+      list.push([r]);
+    } else {
+      list[list.length - 1].push(r);
+    }
+  }
+
+  const result: ReturnGroup[] = [];
+  const pushGroup = (key: string, items: SlittingRow[]) => {
+    if (!items.length) return;
+    const first = items[0];
+    result.push({
+      key,
+      ids: items.map((i) => i.id),
+      firstId: first.id,
+      date: first.date,
+      productCode: first.product_codes?.code ?? "—",
+      unit: first.unit,
+      thickness_mm: first.thickness_mm,
+      issued: items.reduce((s, i) => s + Number(i.source_quantity ?? 0), 0),
+      produced: items.reduce((s, i) => s + Number(i.cut_quantity_produced ?? 0), 0),
+      count: items.length,
+    });
+  };
+
+  groups.forEach((items, k) => pushGroup(k, items));
+  buckets.forEach((lists, k) => lists.forEach((items, i) => pushGroup(`${k}#${i}`, items)));
+
+  result.sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0));
+  return result;
 }
 
 export default function MaterialReturn() {
@@ -28,13 +106,16 @@ export default function MaterialReturn() {
   const [returns, setReturns] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
-  const [form, setForm] = useState({ slitting_entry_id: "", returned_quantity: "", unit: "meters", notes: "" });
+  const [form, setForm] = useState({ group_key: "", returned_quantity: "", unit: "meters", notes: "" });
 
   const load = async () => {
     if (!user) return;
-    
+
+    // Drop legacy cache to avoid showing ungrouped data
+    localStorage.removeItem("cache_mr_slitting_entries");
+
     // Instantly load from localStorage cache
-    const cachedEntries = localStorage.getItem("cache_mr_slitting_entries");
+    const cachedEntries = localStorage.getItem("cache_mr_slitting_entries_v2");
     const cachedReturns = localStorage.getItem("cache_mr_returns");
     if (cachedEntries) {
       try {
@@ -55,13 +136,14 @@ export default function MaterialReturn() {
     try {
       const { data: entryData } = await supabase
         .from("slitting_entries")
-        .select("id, date, source_quantity, cut_quantity_produced, unit, product_codes(code)")
+        .select("id, date, source_quantity, cut_quantity_produced, unit, thickness_mm, gsm, notes, slitting_manager_id, created_at, product_codes(code)")
         .order("date", { ascending: false })
-        .limit(100);
+        .order("created_at", { ascending: true })
+        .limit(300);
       
       const newEntries = (entryData as unknown as SlittingRow[]) ?? [];
       setEntries(newEntries);
-      localStorage.setItem("cache_mr_slitting_entries", JSON.stringify(newEntries));
+      localStorage.setItem("cache_mr_slitting_entries_v2", JSON.stringify(newEntries));
 
       const { data: retData } = await supabase
         .from("slitting_returns" as any)
@@ -82,25 +164,26 @@ export default function MaterialReturn() {
 
   useEffect(() => { load(); }, [user]);
 
-  const selected = entries.find((e) => e.id === form.slitting_entry_id);
-  const alreadyReturned = selected ? (returns[selected.id] ?? 0) : 0;
+  const groups = buildGroups(entries);
+  const selected = groups.find((g) => g.key === form.group_key);
+  const alreadyReturned = selected ? selected.ids.reduce((s, id) => s + (returns[id] ?? 0), 0) : 0;
   const newReturn = parseFloat(form.returned_quantity) || 0;
   const totalReturned = alreadyReturned + newReturn;
-  const issued = selected ? Number(selected.source_quantity) : 0;
-  const produced = selected ? Number(selected.cut_quantity_produced) : 0;
+  const issued = selected ? selected.issued : 0;
+  const produced = selected ? selected.produced : 0;
   const wastage = selected ? issued - produced - totalReturned : 0;
   const matched = selected && Math.abs(wastage) < 0.01;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user || !form.slitting_entry_id || !newReturn) {
+    if (!user || !selected || !newReturn) {
       toast({ title: "Missing fields", description: "Select an entry and enter returned quantity.", variant: "destructive" });
       return;
     }
     setSubmitting(true);
 
     const payload = {
-      slitting_entry_id: form.slitting_entry_id,
+      slitting_entry_id: selected.firstId,
       returned_quantity: newReturn,
       unit: form.unit,
       notes: form.notes || null,
@@ -136,7 +219,7 @@ export default function MaterialReturn() {
     if (!isQueuedOffline) {
       toast({ title: "Return recorded" });
     }
-    setForm({ slitting_entry_id: "", returned_quantity: "", unit: "meters", notes: "" });
+    setForm({ group_key: "", returned_quantity: "", unit: "meters", notes: "" });
     setSubmitting(false);
     await load();
   };
@@ -152,12 +235,14 @@ export default function MaterialReturn() {
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
             <Label>Select Slitting Entry *</Label>
-            <Select value={form.slitting_entry_id} onValueChange={(v) => setForm({ ...form, slitting_entry_id: v })}>
+            <Select value={form.group_key} onValueChange={(v) => setForm({ ...form, group_key: v })}>
               <SelectTrigger><SelectValue placeholder="Choose a slitting source" /></SelectTrigger>
               <SelectContent>
-                {entries.map((e) => (
-                  <SelectItem key={e.id} value={e.id}>
-                    {format(new Date(e.date), "dd/MM/yy")} — {e.product_codes?.code ?? "—"} — {e.source_quantity} {e.unit}
+                {groups.map((g) => (
+                  <SelectItem key={g.key} value={g.key}>
+                    {format(new Date(g.date), "dd/MM/yy")} — {g.productCode} — {g.issued.toLocaleString()} {g.unit}
+                    {g.thickness_mm != null ? ` — ${g.thickness_mm}mm` : ""}
+                    {g.count > 1 ? ` — ${g.count} cuts merged` : ""}
                   </SelectItem>
                 ))}
               </SelectContent>
