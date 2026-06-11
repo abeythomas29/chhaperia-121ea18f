@@ -459,6 +459,7 @@ export type Database = {
           cut_quantity_produced: number
           cut_width_mm: number
           date: string
+          gsm: number | null
           id: string
           notes: string | null
           product_code_id: string
@@ -475,6 +476,7 @@ export type Database = {
           cut_quantity_produced: number
           cut_width_mm: number
           date?: string
+          gsm?: number | null
           id?: string
           notes?: string | null
           product_code_id: string
@@ -491,6 +493,7 @@ export type Database = {
           cut_quantity_produced?: number
           cut_width_mm?: number
           date?: string
+          gsm?: number | null
           id?: string
           notes?: string | null
           product_code_id?: string
