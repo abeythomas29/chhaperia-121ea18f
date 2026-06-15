@@ -35,6 +35,7 @@ interface LogEntry {
   notes: string | null;
   product_codes: { code: string; category_id: string | null } | null;
   profiles: { name: string } | null;
+  company_clients: { name: string } | null;
 }
 
 interface ProductCode {
@@ -93,8 +94,8 @@ export default function ProductionLogs() {
   const fetchEntries = async () => {
     setLoading(true);
 
-    const fullSelect = "id, date, rolls_count, quantity_per_roll, total_quantity, unit, thickness_mm, product_code_id, client_id, notes, gsm, tensile_strength, elongation, swelling_height, swelling_speed, surface_resistance, product_codes(code, category_id), profiles:worker_id(name)";
-    const basicSelect = "id, date, rolls_count, quantity_per_roll, total_quantity, unit, thickness_mm, product_code_id, client_id, notes, product_codes(code, category_id), profiles:worker_id(name)";
+    const fullSelect = "id, date, rolls_count, quantity_per_roll, total_quantity, unit, thickness_mm, product_code_id, client_id, notes, gsm, tensile_strength, elongation, swelling_height, swelling_speed, surface_resistance, product_codes(code, category_id), profiles:worker_id(name), company_clients:client_id(name)";
+    const basicSelect = "id, date, rolls_count, quantity_per_roll, total_quantity, unit, thickness_mm, product_code_id, client_id, notes, product_codes(code, category_id), profiles:worker_id(name), company_clients:client_id(name)";
 
     let { data, error } = await supabase
       .from("production_entries")
@@ -144,7 +145,8 @@ export default function ProductionLogs() {
     const matchesSearch =
       !s ||
       e.product_codes?.code?.toLowerCase().includes(s) ||
-      e.profiles?.name?.toLowerCase().includes(s);
+      e.profiles?.name?.toLowerCase().includes(s) ||
+      e.company_clients?.name?.toLowerCase().includes(s);
 
     const entryDate = new Date(e.date);
     const matchesFrom = !dateFrom || entryDate >= dateFrom;
@@ -175,10 +177,11 @@ export default function ProductionLogs() {
 
   const exportCSV = () => {
     const rows = [
-      ["Date", "Product Code", "Production Manager", "Rolls", "Qty/Roll", "Total", "Unit", "Thickness (mm)"],
+      ["Date", "Product Code", "Client", "Production Manager", "Rolls", "Qty/Roll", "Total", "Unit", "Thickness (mm)"],
       ...filtered.map((e) => [
         e.date,
         e.product_codes?.code ?? "",
+        e.company_clients?.name ?? "",
         e.profiles?.name ?? "",
         e.rolls_count,
         e.quantity_per_roll,
@@ -355,6 +358,7 @@ export default function ProductionLogs() {
               </TableHead>
               <TableHead className="text-base">Date</TableHead>
               <TableHead>Product Code</TableHead>
+              <TableHead>Client</TableHead>
               <TableHead>Production Manager</TableHead>
               <TableHead className="text-right">Rolls</TableHead>
               <TableHead className="text-right">Qty/Roll</TableHead>
@@ -371,11 +375,11 @@ export default function ProductionLogs() {
           <TableBody>
             {loading ? (
               <TableRow>
-                <TableCell colSpan={15} className="text-center py-8 text-muted-foreground">Loading...</TableCell>
+                <TableCell colSpan={16} className="text-center py-8 text-muted-foreground">Loading...</TableCell>
               </TableRow>
             ) : filtered.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={15} className="text-center py-8 text-muted-foreground">No entries found</TableCell>
+                <TableCell colSpan={16} className="text-center py-8 text-muted-foreground">No entries found</TableCell>
               </TableRow>
             ) : (
               filtered.map((e) => {
@@ -405,6 +409,7 @@ export default function ProductionLogs() {
                   </TableCell>
                   <TableCell className="text-base font-medium whitespace-nowrap">{(() => { const d = new Date(e.date); return `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getFullYear()).slice(-2)}`; })()}</TableCell>
                   <TableCell className="font-medium">{e.product_codes?.code ?? "—"}</TableCell>
+                  <TableCell>{e.company_clients?.name ?? "—"}</TableCell>
                   <TableCell>{e.profiles?.name ?? "—"}</TableCell>
                   <TableCell className="text-right">{e.rolls_count}</TableCell>
                   <TableCell className="text-right">{e.quantity_per_roll}</TableCell>
