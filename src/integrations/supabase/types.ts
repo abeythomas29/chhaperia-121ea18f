@@ -38,6 +38,63 @@ export type Database = {
         }
         Relationships: []
       }
+      head36_entries: {
+        Row: {
+          created_at: string
+          date: string
+          gsm: number | null
+          id: string
+          length_per_tape_mtr: number | null
+          notes: string | null
+          operator_id: string
+          product_code_id: string | null
+          roll_width_mm: number | null
+          rolls_produced: number
+          rolls_taken: number
+          slitting_entry_id: string | null
+          thickness_mm: number | null
+          total_quantity: number | null
+          unit: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          date?: string
+          gsm?: number | null
+          id?: string
+          length_per_tape_mtr?: number | null
+          notes?: string | null
+          operator_id: string
+          product_code_id?: string | null
+          roll_width_mm?: number | null
+          rolls_produced?: number
+          rolls_taken?: number
+          slitting_entry_id?: string | null
+          thickness_mm?: number | null
+          total_quantity?: number | null
+          unit?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          date?: string
+          gsm?: number | null
+          id?: string
+          length_per_tape_mtr?: number | null
+          notes?: string | null
+          operator_id?: string
+          product_code_id?: string | null
+          roll_width_mm?: number | null
+          rolls_produced?: number
+          rolls_taken?: number
+          slitting_entry_id?: string | null
+          thickness_mm?: number | null
+          total_quantity?: number | null
+          unit?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       product_categories: {
         Row: {
           created_at: string
