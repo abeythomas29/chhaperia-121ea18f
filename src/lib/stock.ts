@@ -17,7 +17,7 @@ export async function getFinishedProductAvailable(productCodeId: string): Promis
       .limit(5000),
     supabase
       .from("slitting_entries")
-      .select("cut_quantity_produced")
+      .select("cut_quantity_produced, source_quantity")
       .eq("product_code_id", productCodeId)
       .limit(5000),
     (supabase as any)
@@ -42,8 +42,12 @@ export async function getFinishedProductAvailable(productCodeId: string): Promis
     const qty = Number(p.total_quantity ?? Number(p.rolls_count) * Number(p.quantity_per_roll));
     return sum + (Number.isFinite(qty) ? qty : 0);
   }, 0);
-  const slit = (slitRes.data ?? []).reduce(
+  const slitProduced = (slitRes.data ?? []).reduce(
     (s: number, r: any) => s + Number(r.cut_quantity_produced ?? 0),
+    0,
+  );
+  const slitConsumed = (slitRes.data ?? []).reduce(
+    (s: number, r: any) => s + Number(r.source_quantity ?? 0),
     0,
   );
   const head36 = (head36Res.data ?? []).reduce((s: number, r: any) => {
@@ -55,5 +59,5 @@ export async function getFinishedProductAvailable(productCodeId: string): Promis
   const issued = (issueRes.data ?? []).reduce((s: number, i: any) => s + Number(i.quantity ?? 0), 0);
   const sold = (saleRes.data ?? []).reduce((s: number, i: any) => s + Number(i.quantity ?? 0), 0);
 
-  return produced + slit + head36 - issued - sold;
+  return produced + slitProduced - slitConsumed + head36 - issued - sold;
 }

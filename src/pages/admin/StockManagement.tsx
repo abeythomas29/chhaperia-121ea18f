@@ -24,6 +24,8 @@ interface StockSummary {
   code: string;
   unit: string;
   produced: number;
+  slittingUse: number;
+  clientIssued: number;
   issued: number;
   available: number;
   thicknessBreakdown: ThicknessBreakdown[];
@@ -99,6 +101,12 @@ export default function StockManagement() {
       .order("date", { ascending: false })
       .limit(1000);
 
+    // Fetch slitting entries (OUT — finished product consumed as input to slitting)
+    const { data: slitData } = await supabase
+      .from("slitting_entries")
+      .select("id, product_code_id, source_quantity")
+      .limit(5000);
+
     // Fetch sales (OUT) – finished product sales also reduce stock and should appear in the ledger
     // Note: sales table has no FK constraints, so we cannot use embedded joins. Fetch flat and map locally.
     const { data: salesRaw, error: salesErr } = await supabase
@@ -139,6 +147,8 @@ export default function StockManagement() {
     const pcTotals = new Map<string, { code: string; unit: string; produced: number }>();
     const thicknessMap = new Map<string, Map<number | null, number>>();
     const issueMap = new Map<string, number>();
+    const slittingUseMap = new Map<string, number>();
+    const clientIssuedMap = new Map<string, number>();
 
     for (const p of (prodData ?? []) as any[]) {
       const pcId = p.product_code_id;
@@ -160,21 +170,37 @@ export default function StockManagement() {
     for (const i of (issueData ?? []) as any[]) {
       const pcId = i.product_code_id;
       issueMap.set(pcId, (issueMap.get(pcId) ?? 0) + Number(i.quantity));
+      clientIssuedMap.set(pcId, (clientIssuedMap.get(pcId) ?? 0) + Number(i.quantity));
     }
 
     // Include finished-product sales in issued totals (they reduce finished stock)
     for (const s of (salesData ?? []) as any[]) {
       if (s.item_type === "finished_product" && s.product_code_id) {
         issueMap.set(s.product_code_id, (issueMap.get(s.product_code_id) ?? 0) + Number(s.quantity));
+        clientIssuedMap.set(s.product_code_id, (clientIssuedMap.get(s.product_code_id) ?? 0) + Number(s.quantity));
       }
     }
 
-    const allPcIds = new Set([...pcTotals.keys(), ...issueMap.keys()]);
+    // Slitting consumption: source_quantity is recorded on the first inserted row per submission
+    for (const r of (slitData ?? []) as any[]) {
+      const pcId = r.product_code_id;
+      const qty = Number(r.source_quantity ?? 0);
+      if (!pcId || !qty) continue;
+      slittingUseMap.set(pcId, (slittingUseMap.get(pcId) ?? 0) + qty);
+    }
+
+    const allPcIds = new Set([
+      ...pcTotals.keys(),
+      ...issueMap.keys(),
+      ...slittingUseMap.keys(),
+    ]);
     const summaryList: StockSummary[] = [];
     for (const pcId of allPcIds) {
       const prod = pcTotals.get(pcId);
       const produced = prod?.produced ?? 0;
-      const issued = issueMap.get(pcId) ?? 0;
+      const clientIssued = clientIssuedMap.get(pcId) ?? 0;
+      const slittingUse = slittingUseMap.get(pcId) ?? 0;
+      const issued = clientIssued + slittingUse;
       const tMap = thicknessMap.get(pcId);
       const breakdown: ThicknessBreakdown[] = [];
       if (tMap) {
@@ -187,8 +213,10 @@ export default function StockManagement() {
         code: prod?.code ?? "—",
         unit: prod?.unit ?? "meters",
         produced,
+        slittingUse,
+        clientIssued,
         issued,
-        available: produced - issued,
+        available: produced - clientIssued - slittingUse,
         thicknessBreakdown: breakdown,
       });
     }
@@ -349,14 +377,18 @@ export default function StockManagement() {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="grid grid-cols-3 gap-2 text-center mb-3">
+                <div className="grid grid-cols-4 gap-2 text-center mb-3">
                   <div>
                     <p className="text-xs text-muted-foreground">Produced</p>
                     <p className="text-lg font-semibold text-green-600">{s.produced.toLocaleString()}</p>
                   </div>
                   <div>
-                    <p className="text-xs text-muted-foreground">Issued</p>
-                    <p className="text-lg font-semibold text-red-500">{s.issued.toLocaleString()}</p>
+                    <p className="text-xs text-muted-foreground">Slitting Use</p>
+                    <p className="text-lg font-semibold text-red-500">{s.slittingUse.toLocaleString()}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">Client Issues</p>
+                    <p className="text-lg font-semibold text-red-500">{s.clientIssued.toLocaleString()}</p>
                   </div>
                   <div>
                     <p className="text-xs text-muted-foreground">Available</p>
@@ -588,7 +620,8 @@ export default function StockManagement() {
                 return (
                   <div className="flex gap-4 text-sm p-2 rounded bg-muted">
                     <span>Produced: <strong className="text-green-600">{stock.produced.toLocaleString()}</strong></span>
-                    <span>Issued: <strong className="text-red-500">{stock.issued.toLocaleString()}</strong></span>
+                    <span>Slitting Use: <strong className="text-red-500">{stock.slittingUse.toLocaleString()}</strong></span>
+                    <span>Client Issues: <strong className="text-red-500">{stock.clientIssued.toLocaleString()}</strong></span>
                     <span>Available: <strong className={stock.available > 0 ? "text-primary" : "text-destructive"}>{stock.available.toLocaleString()} {stock.unit}</strong></span>
                   </div>
                 );
