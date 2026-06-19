@@ -260,7 +260,7 @@ export default function StockManagement() {
         type: "OUT",
         product_code: i.product_codes?.code ?? "—",
         thickness_mm: i.thickness_mm != null ? Number(i.thickness_mm) : null,
-        client_name: i.company_clients?.name ?? (i.recipient?.name ? `n: ${i.recipient.name}` : "—"),
+        client_name: i.company_clients?.name ?? (i.recipient?.name ? `PM: ${i.recipient.name}` : "—"),
         quantity: Number(i.quantity),
         unit: i.unit,
         notes: i.notes,
