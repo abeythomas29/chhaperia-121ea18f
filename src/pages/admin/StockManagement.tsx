@@ -609,8 +609,8 @@ export default function StockManagement() {
       <Dialog open={issueOpen} onOpenChange={(open) => { if (!open) { setIssueOpen(false); resetIssueForm(); } }}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Issue Stock to Client</DialogTitle>
-            <DialogDescription>Select a product, client, and quantity to issue.</DialogDescription>
+            <DialogTitle>Issue Stock</DialogTitle>
+            <DialogDescription>Select a product, recipient, and quantity to issue.</DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-2">
             <div className="space-y-2">
