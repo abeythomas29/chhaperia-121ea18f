@@ -634,11 +634,12 @@ export type Database = {
       }
       stock_issues: {
         Row: {
-          client_id: string
+          client_id: string | null
           created_at: string
           date: string
           id: string
           issued_by: string
+          issued_to_user_id: string | null
           notes: string | null
           product_code_id: string
           quantity: number
@@ -647,11 +648,12 @@ export type Database = {
           updated_at: string
         }
         Insert: {
-          client_id: string
+          client_id?: string | null
           created_at?: string
           date?: string
           id?: string
           issued_by: string
+          issued_to_user_id?: string | null
           notes?: string | null
           product_code_id: string
           quantity: number
@@ -660,11 +662,12 @@ export type Database = {
           updated_at?: string
         }
         Update: {
-          client_id?: string
+          client_id?: string | null
           created_at?: string
           date?: string
           id?: string
           issued_by?: string
+          issued_to_user_id?: string | null
           notes?: string | null
           product_code_id?: string
           quantity?: number
@@ -683,6 +686,13 @@ export type Database = {
           {
             foreignKeyName: "stock_issues_issued_by_profiles_fkey"
             columns: ["issued_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "stock_issues_issued_to_user_id_fkey"
+            columns: ["issued_to_user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["user_id"]

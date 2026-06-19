@@ -55,12 +55,18 @@ interface ProductCode {
   code: string;
 }
 
+interface ProductionManager {
+  user_id: string;
+  name: string;
+}
+
 export default function StockManagement() {
   const { user } = useAuth();
   const [summaries, setSummaries] = useState<StockSummary[]>([]);
   const [ledger, setLedger] = useState<LedgerEntry[]>([]);
   const [clients, setClients] = useState<Client[]>([]);
   const [productCodes, setProductCodes] = useState<ProductCode[]>([]);
+  const [productionManagers, setProductionManagers] = useState<ProductionManager[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [inPage, setInPage] = useState(1);
@@ -70,7 +76,9 @@ export default function StockManagement() {
   // Issue dialog
   const [issueOpen, setIssueOpen] = useState(false);
   const [issueProductCodeId, setIssueProductCodeId] = useState("");
+  const [issueToType, setIssueToType] = useState<"client" | "production_manager">("client");
   const [issueClientId, setIssueClientId] = useState("");
+  const [issueProductionManagerId, setIssueProductionManagerId] = useState("");
   const [issueQuantity, setIssueQuantity] = useState("");
   const [issueUnit, setIssueUnit] = useState("meters");
   const [issueNotes, setIssueNotes] = useState("");
@@ -97,7 +105,7 @@ export default function StockManagement() {
     // Fetch stock issues (OUT)
     const { data: issueData } = await supabase
       .from("stock_issues")
-      .select("id, date, product_code_id, quantity, unit, notes, thickness_mm, client_id, product_codes(code), company_clients(name), profiles:issued_by(name)")
+      .select("id, date, product_code_id, quantity, unit, notes, thickness_mm, client_id, issued_to_user_id, product_codes(code), company_clients(name), profiles:issued_by(name), recipient:profiles!stock_issues_issued_to_user_id_fkey(name)")
       .order("date", { ascending: false })
       .limit(1000);
 
@@ -136,12 +144,17 @@ export default function StockManagement() {
     }));
 
     // Fetch dropdowns
-    const [{ data: cl }, { data: pc }] = await Promise.all([
+    const [{ data: cl }, { data: pc }, { data: pmRoles }] = await Promise.all([
       supabase.from("company_clients").select("id, name").eq("status", "active").order("name"),
       supabase.from("product_codes").select("id, code").eq("status", "active").order("code"),
+      supabase.from("user_roles").select("user_id, profiles!inner(name)").eq("role", "worker"),
     ]);
     setClients(cl ?? []);
     setProductCodes(pc ?? []);
+    const pms: ProductionManager[] = ((pmRoles ?? []) as any[])
+      .map((r) => ({ user_id: r.user_id, name: r.profiles?.name ?? "Unknown" }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+    setProductionManagers(pms);
 
     // Build per-product-code totals and thickness breakdowns
     const pcTotals = new Map<string, { code: string; unit: string; produced: number }>();
@@ -247,7 +260,7 @@ export default function StockManagement() {
         type: "OUT",
         product_code: i.product_codes?.code ?? "—",
         thickness_mm: i.thickness_mm != null ? Number(i.thickness_mm) : null,
-        client_name: i.company_clients?.name ?? "—",
+        client_name: i.company_clients?.name ?? (i.recipient?.name ? `PM: ${i.recipient.name}` : "—"),
         quantity: Number(i.quantity),
         unit: i.unit,
         notes: i.notes,
@@ -288,7 +301,9 @@ export default function StockManagement() {
   });
 
   const handleIssue = async () => {
-    if (!user || !issueProductCodeId || !issueClientId || !issueQuantity) return;
+    if (!user || !issueProductCodeId || !issueQuantity) return;
+    if (issueToType === "client" && !issueClientId) return;
+    if (issueToType === "production_manager" && !issueProductionManagerId) return;
 
     // Block over-issue: validate against computed available stock
     const stock = summaries.find((s) => s.product_code_id === issueProductCodeId);
@@ -306,7 +321,8 @@ export default function StockManagement() {
 
     const { error } = await supabase.from("stock_issues").insert({
       product_code_id: issueProductCodeId,
-      client_id: issueClientId,
+      client_id: issueToType === "client" ? issueClientId : null,
+      issued_to_user_id: issueToType === "production_manager" ? issueProductionManagerId : null,
       quantity: Number(issueQuantity),
       unit: issueUnit,
       thickness_mm: issueThickness ? Number(issueThickness) : null,
@@ -328,7 +344,9 @@ export default function StockManagement() {
 
   const resetIssueForm = () => {
     setIssueProductCodeId("");
+    setIssueToType("client");
     setIssueClientId("");
+    setIssueProductionManagerId("");
     setIssueQuantity("");
     setIssueUnit("meters");
     setIssueThickness("");
@@ -591,8 +609,8 @@ export default function StockManagement() {
       <Dialog open={issueOpen} onOpenChange={(open) => { if (!open) { setIssueOpen(false); resetIssueForm(); } }}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Issue Stock to Client</DialogTitle>
-            <DialogDescription>Select a product, client, and quantity to issue.</DialogDescription>
+            <DialogTitle>Issue Stock</DialogTitle>
+            <DialogDescription>Select a product, recipient, and quantity to issue.</DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-2">
             <div className="space-y-2">
@@ -628,16 +646,48 @@ export default function StockManagement() {
               })()}
             </div>
             <div className="space-y-2">
-              <Label>Client</Label>
-              <Select value={issueClientId} onValueChange={setIssueClientId}>
-                <SelectTrigger><SelectValue placeholder="Select client" /></SelectTrigger>
+              <Label>Issue To</Label>
+              <Select value={issueToType} onValueChange={(v) => setIssueToType(v as "client" | "production_manager")}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  {clients.map((c) => (
-                    <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
-                  ))}
+                  <SelectItem value="client">Client</SelectItem>
+                  <SelectItem value="production_manager">Production Manager</SelectItem>
                 </SelectContent>
               </Select>
             </div>
+            {issueToType === "client" ? (
+              <div className="space-y-2">
+                <Label>Client</Label>
+                <Select value={issueClientId} onValueChange={setIssueClientId}>
+                  <SelectTrigger><SelectValue placeholder="Select client" /></SelectTrigger>
+                  <SelectContent>
+                    {clients.length === 0 ? (
+                      <div className="px-2 py-1.5 text-sm text-muted-foreground">No clients available</div>
+                    ) : (
+                      clients.map((c) => (
+                        <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                      ))
+                    )}
+                  </SelectContent>
+                </Select>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                <Label>Production Manager</Label>
+                <Select value={issueProductionManagerId} onValueChange={setIssueProductionManagerId}>
+                  <SelectTrigger><SelectValue placeholder="Select production manager" /></SelectTrigger>
+                  <SelectContent>
+                    {productionManagers.length === 0 ? (
+                      <div className="px-2 py-1.5 text-sm text-muted-foreground">No production managers available</div>
+                    ) : (
+                      productionManagers.map((pm) => (
+                        <SelectItem key={pm.user_id} value={pm.user_id}>{pm.name}</SelectItem>
+                      ))
+                    )}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
             <div className="grid grid-cols-3 gap-4">
               <div className="space-y-2">
                 <Label>Quantity</Label>
