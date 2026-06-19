@@ -147,13 +147,21 @@ export default function StockManagement() {
     const [{ data: cl }, { data: pc }, { data: pmRoles }] = await Promise.all([
       supabase.from("company_clients").select("id, name").eq("status", "active").order("name"),
       supabase.from("product_codes").select("id, code").eq("status", "active").order("code"),
-      supabase.from("user_roles").select("user_id, profiles!inner(name)").eq("role", "worker"),
+      supabase.from("user_roles").select("user_id").eq("role", "worker"),
     ]);
     setClients(cl ?? []);
     setProductCodes(pc ?? []);
-    const pms: ProductionManager[] = ((pmRoles ?? []) as any[])
-      .map((r) => ({ user_id: r.user_id, name: r.profiles?.name ?? "Unknown" }))
-      .sort((a, b) => a.name.localeCompare(b.name));
+    const pmUserIds = Array.from(new Set(((pmRoles ?? []) as any[]).map((r) => r.user_id).filter(Boolean)));
+    let pms: ProductionManager[] = [];
+    if (pmUserIds.length) {
+      const { data: pmProfiles } = await supabase
+        .from("profiles")
+        .select("user_id, name")
+        .in("user_id", pmUserIds);
+      pms = ((pmProfiles ?? []) as any[])
+        .map((p) => ({ user_id: p.user_id, name: p.name ?? "Unknown" }))
+        .sort((a, b) => a.name.localeCompare(b.name));
+    }
     setProductionManagers(pms);
 
     // Build per-product-code totals and thickness breakdowns
