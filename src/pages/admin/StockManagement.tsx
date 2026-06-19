@@ -651,7 +651,7 @@ export default function StockManagement() {
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="client">Client</SelectItem>
-                  <SelectItem value="production_manager">n</SelectItem>
+                  <SelectItem value="production_manager">Production Manager</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -673,12 +673,12 @@ export default function StockManagement() {
               </div>
             ) : (
               <div className="space-y-2">
-                <Label>n</Label>
+                <Label>Production Manager</Label>
                 <Select value={issueProductionManagerId} onValueChange={setIssueProductionManagerId}>
-                  <SelectTrigger><SelectValue placeholder="Select n" /></SelectTrigger>
+                  <SelectTrigger><SelectValue placeholder="Select production manager" /></SelectTrigger>
                   <SelectContent>
                     {productionManagers.length === 0 ? (
-                      <div className="px-2 py-1.5 text-sm text-muted-foreground">No n available</div>
+                      <div className="px-2 py-1.5 text-sm text-muted-foreground">No production managers available</div>
                     ) : (
                       productionManagers.map((pm) => (
                         <SelectItem key={pm.user_id} value={pm.user_id}>{pm.name}</SelectItem>
