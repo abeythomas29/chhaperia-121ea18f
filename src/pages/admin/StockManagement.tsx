@@ -144,25 +144,15 @@ export default function StockManagement() {
     }));
 
     // Fetch dropdowns
-    const [{ data: cl }, { data: pc }, { data: pmRoles }] = await Promise.all([
+    const [{ data: cl }, { data: pc }, { data: pmRecipients, error: pmError }] = await Promise.all([
       supabase.from("company_clients").select("id, name").eq("status", "active").order("name"),
       supabase.from("product_codes").select("id, code").eq("status", "active").order("code"),
-      supabase.from("user_roles").select("user_id").eq("role", "worker"),
+      supabase.rpc("list_production_manager_recipients"),
     ]);
     setClients(cl ?? []);
     setProductCodes(pc ?? []);
-    const pmUserIds = Array.from(new Set(((pmRoles ?? []) as any[]).map((r) => r.user_id).filter(Boolean)));
-    let pms: ProductionManager[] = [];
-    if (pmUserIds.length) {
-      const { data: pmProfiles } = await supabase
-        .from("profiles")
-        .select("user_id, name")
-        .in("user_id", pmUserIds);
-      pms = ((pmProfiles ?? []) as any[])
-        .map((p) => ({ user_id: p.user_id, name: p.name ?? "Unknown" }))
-        .sort((a, b) => a.name.localeCompare(b.name));
-    }
-    setProductionManagers(pms);
+    if (pmError) console.error("production manager recipients fetch error", pmError);
+    setProductionManagers((pmRecipients ?? []).map((p) => ({ user_id: p.user_id, name: p.name ?? "Unknown" })));
 
     // Build per-product-code totals and thickness breakdowns
     const pcTotals = new Map<string, { code: string; unit: string; produced: number }>();
