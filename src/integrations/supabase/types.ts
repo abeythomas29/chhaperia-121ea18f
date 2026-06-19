@@ -748,6 +748,13 @@ export type Database = {
       get_user_role: { Args: { _user_id: string }; Returns: string }
       has_role: { Args: { _role: string; _user_id: string }; Returns: boolean }
       is_admin: { Args: { _user_id: string }; Returns: boolean }
+      list_production_manager_recipients: {
+        Args: never
+        Returns: {
+          name: string
+          user_id: string
+        }[]
+      }
     }
     Enums: {
       signup_department: "worker" | "inventory_manager" | "slitting_manager"
