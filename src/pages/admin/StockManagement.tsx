@@ -377,14 +377,18 @@ export default function StockManagement() {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="grid grid-cols-3 gap-2 text-center mb-3">
+                <div className="grid grid-cols-4 gap-2 text-center mb-3">
                   <div>
                     <p className="text-xs text-muted-foreground">Produced</p>
                     <p className="text-lg font-semibold text-green-600">{s.produced.toLocaleString()}</p>
                   </div>
                   <div>
-                    <p className="text-xs text-muted-foreground">Issued</p>
-                    <p className="text-lg font-semibold text-red-500">{s.issued.toLocaleString()}</p>
+                    <p className="text-xs text-muted-foreground">Slitting Use</p>
+                    <p className="text-lg font-semibold text-red-500">{s.slittingUse.toLocaleString()}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">Client Issues</p>
+                    <p className="text-lg font-semibold text-red-500">{s.clientIssued.toLocaleString()}</p>
                   </div>
                   <div>
                     <p className="text-xs text-muted-foreground">Available</p>
@@ -616,7 +620,8 @@ export default function StockManagement() {
                 return (
                   <div className="flex gap-4 text-sm p-2 rounded bg-muted">
                     <span>Produced: <strong className="text-green-600">{stock.produced.toLocaleString()}</strong></span>
-                    <span>Issued: <strong className="text-red-500">{stock.issued.toLocaleString()}</strong></span>
+                    <span>Slitting Use: <strong className="text-red-500">{stock.slittingUse.toLocaleString()}</strong></span>
+                    <span>Client Issues: <strong className="text-red-500">{stock.clientIssued.toLocaleString()}</strong></span>
                     <span>Available: <strong className={stock.available > 0 ? "text-primary" : "text-destructive"}>{stock.available.toLocaleString()} {stock.unit}</strong></span>
                   </div>
                 );
