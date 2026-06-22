@@ -5,11 +5,12 @@ import { supabase } from "@/integrations/supabase/client";
  * available = sum(production_entries.total_quantity)
  *           + sum(slitting_entries.cut_quantity_produced)
  *           + sum(head36_entries.total_quantity)
+ *           + sum(slitting_returns.returned_quantity) for reusable returns
  *           - sum(stock_issues.quantity)
  *           - sum(sales.quantity where item_type='finished_product')
  */
 export async function getFinishedProductAvailable(productCodeId: string): Promise<number> {
-  const [prodRes, slitRes, head36Res, issueRes, saleRes] = await Promise.all([
+  const [prodRes, slitRes, head36Res, issueRes, saleRes, slitEntryIdsRes] = await Promise.all([
     supabase
       .from("production_entries")
       .select("total_quantity, rolls_count, quantity_per_roll")
@@ -36,6 +37,11 @@ export async function getFinishedProductAvailable(productCodeId: string): Promis
       .eq("item_type", "finished_product")
       .eq("product_code_id", productCodeId)
       .limit(5000),
+    supabase
+      .from("slitting_entries")
+      .select("id")
+      .eq("product_code_id", productCodeId)
+      .limit(5000),
   ]);
 
   const produced = (prodRes.data ?? []).reduce((sum: number, p: any) => {
@@ -59,5 +65,35 @@ export async function getFinishedProductAvailable(productCodeId: string): Promis
   const issued = (issueRes.data ?? []).reduce((s: number, i: any) => s + Number(i.quantity ?? 0), 0);
   const sold = (saleRes.data ?? []).reduce((s: number, i: any) => s + Number(i.quantity ?? 0), 0);
 
-  return produced + slitProduced - slitConsumed + head36 - issued - sold;
+  // Reusable material returns flow back into available stock.
+  // Wastage returns (return_type = 'wastage') must NOT be added back — when/if
+  // that column is introduced on slitting_returns, the filter below will exclude them.
+  const slitEntryIds = ((slitEntryIdsRes.data as any[]) ?? []).map((r) => r.id).filter(Boolean);
+  let reusableReturned = 0;
+  if (slitEntryIds.length > 0) {
+    const retRes: any = await (supabase as any)
+      .from("slitting_returns")
+      .select("returned_quantity, return_type")
+      .in("slitting_entry_id", slitEntryIds)
+      .limit(5000);
+    // If return_type column doesn't exist yet, Supabase returns rows without it (undefined);
+    // treat undefined/null as reusable. Only explicit 'wastage' is excluded.
+    reusableReturned = ((retRes?.data as any[]) ?? [])
+      .filter((r) => (r?.return_type ?? "reusable") !== "wastage")
+      .reduce((s: number, r: any) => s + Number(r?.returned_quantity ?? 0), 0);
+    if (retRes?.error) {
+      // Fallback: if selecting return_type fails (column missing), refetch without it.
+      const retRes2: any = await (supabase as any)
+        .from("slitting_returns")
+        .select("returned_quantity")
+        .in("slitting_entry_id", slitEntryIds)
+        .limit(5000);
+      reusableReturned = ((retRes2?.data as any[]) ?? []).reduce(
+        (s: number, r: any) => s + Number(r?.returned_quantity ?? 0),
+        0,
+      );
+    }
+  }
+
+  return produced + slitProduced - slitConsumed + head36 + reusableReturned - issued - sold;
 }
