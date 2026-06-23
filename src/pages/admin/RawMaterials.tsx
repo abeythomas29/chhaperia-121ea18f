@@ -571,8 +571,12 @@ export default function RawMaterials() {
                   <TableCell className="text-right font-mono">{m.current_stock.toLocaleString()}</TableCell>
                   <TableCell><Badge variant={m.status === "active" ? "default" : "secondary"}>{m.status}</Badge></TableCell>
                   <TableCell className="text-right">
-                    <Button variant="ghost" size="icon" onClick={() => openEdit(m)}><Pencil className="h-4 w-4" /></Button>
-                    <Button variant="ghost" size="icon" onClick={() => setDeleteId(m.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                    {canManage ? (
+                      <>
+                        <Button variant="ghost" size="icon" onClick={() => openEdit(m)}><Pencil className="h-4 w-4" /></Button>
+                        <Button variant="ghost" size="icon" onClick={() => setDeleteId(m.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                      </>
+                    ) : (<span className="text-xs text-muted-foreground">—</span>)}
                   </TableCell>
                 </TableRow>
               ))}
