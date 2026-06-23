@@ -656,12 +656,17 @@ export type Database = {
           client_id: string | null
           created_at: string
           date: string
+          gsm: number | null
           id: string
+          issue_quantity: number | null
+          issue_quantity_kg: number | null
+          issue_unit: string | null
           issued_by: string
           issued_to_user_id: string | null
           notes: string | null
           product_code_id: string
           quantity: number
+          recipient_type: string | null
           thickness_mm: number | null
           unit: string
           updated_at: string
@@ -670,12 +675,17 @@ export type Database = {
           client_id?: string | null
           created_at?: string
           date?: string
+          gsm?: number | null
           id?: string
+          issue_quantity?: number | null
+          issue_quantity_kg?: number | null
+          issue_unit?: string | null
           issued_by: string
           issued_to_user_id?: string | null
           notes?: string | null
           product_code_id: string
           quantity: number
+          recipient_type?: string | null
           thickness_mm?: number | null
           unit?: string
           updated_at?: string
@@ -684,12 +694,17 @@ export type Database = {
           client_id?: string | null
           created_at?: string
           date?: string
+          gsm?: number | null
           id?: string
+          issue_quantity?: number | null
+          issue_quantity_kg?: number | null
+          issue_unit?: string | null
           issued_by?: string
           issued_to_user_id?: string | null
           notes?: string | null
           product_code_id?: string
           quantity?: number
+          recipient_type?: string | null
           thickness_mm?: number | null
           unit?: string
           updated_at?: string
