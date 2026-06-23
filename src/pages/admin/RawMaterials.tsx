@@ -265,6 +265,73 @@ export default function RawMaterials() {
     setEditOpen(true);
   };
 
+  const resetIssueForm = () => {
+    setIssueMaterialId("");
+    setIssueQty("");
+    setIssueUnit("kg");
+    setIssueGsm("");
+    setIssueThicknessMm("");
+    setIssueRecipientId("");
+    setIssueNotes("");
+    setIssueDate(format(new Date(), "yyyy-MM-dd"));
+  };
+
+  const selectedIssueMaterial = materials.find((m) => m.id === issueMaterialId);
+  const issueGsmNum = Number(issueGsm);
+  const issueQtyNum = Number(issueQty);
+  const convertedKg = issueUnit === "kg"
+    ? issueQtyNum
+    : (issueQtyNum && issueGsmNum ? (issueQtyNum * issueGsmNum) / 1000 : 0);
+
+  const submitIssue = async () => {
+    if (!user) return;
+    if (!issueMaterialId || !issueQty || !issueRecipientId) {
+      toast({ title: "Missing fields", description: "Material, quantity and recipient are required.", variant: "destructive" });
+      return;
+    }
+    if (!(issueQtyNum > 0)) {
+      toast({ title: "Invalid quantity", description: "Quantity must be greater than 0.", variant: "destructive" });
+      return;
+    }
+    if (issueUnit === "sqm" && !(issueGsmNum > 0)) {
+      toast({ title: "GSM required", description: "Enter GSM to convert sqm to kg.", variant: "destructive" });
+      return;
+    }
+    if (!(convertedKg > 0)) {
+      toast({ title: "Invalid conversion", description: "Converted kg must be greater than 0.", variant: "destructive" });
+      return;
+    }
+    if (selectedIssueMaterial && convertedKg > Number(selectedIssueMaterial.current_stock)) {
+      toast({
+        title: "Insufficient stock",
+        description: `Available: ${Number(selectedIssueMaterial.current_stock).toLocaleString()} kg. Required: ${convertedKg.toLocaleString()} kg.`,
+        variant: "destructive",
+      });
+      return;
+    }
+    setIssuing(true);
+    // Store the issue as a negative-quantity row; existing INSERT trigger deducts current_stock.
+    const { error } = await supabase.from("raw_material_stock_entries").insert({
+      raw_material_id: issueMaterialId,
+      quantity: -convertedKg,
+      date: issueDate,
+      notes: issueNotes.trim() || null,
+      thickness_mm: issueThicknessMm ? Number(issueThicknessMm) : null,
+      added_by: user.id,
+      entry_kind: "out",
+      issue_unit: issueUnit,
+      issue_quantity: issueQtyNum,
+      gsm: issueUnit === "sqm" ? issueGsmNum : (issueGsm ? issueGsmNum : null),
+      issued_to_user_id: issueRecipientId,
+    } as any);
+    setIssuing(false);
+    if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); return; }
+    toast({ title: "Material issued", description: `Deducted ${convertedKg.toLocaleString()} kg from stock.` });
+    setIssueOpen(false);
+    resetIssueForm();
+    fetchData();
+  };
+
   const openEditEntry = (e: StockEntry) => {
     setEditEntry(e);
     setEMaterialId(e.raw_material_id);
