@@ -86,6 +86,8 @@ const App = () => {
                   <Route path="history" element={<InwardHistory />} />
                   <Route path="sales" element={<SalesEntry />} />
                   <Route path="sales-history" element={<SalesHistory />} />
+                  <Route path="raw" element={<RawMaterials />} />
+                  <Route path="stock" element={<StockManagement />} />
                 </Route>
                 <Route path="/slitting" element={<SlittingManagerLayout />}>
                   <Route index element={<SlittingEntry />} />
