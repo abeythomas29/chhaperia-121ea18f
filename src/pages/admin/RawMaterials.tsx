@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Package, ArrowDownToLine, Search, Pencil, Trash2 } from "lucide-react";
+import { Plus, Package, ArrowDownToLine, ArrowUpFromLine, Search, Pencil, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
@@ -35,19 +35,27 @@ interface StockEntry {
   added_by: string;
   created_at: string;
   kind?: "in" | "out";
+  issue_unit?: string | null;
+  issue_quantity?: number | null;
+  gsm?: number | null;
+  issued_to_user_id?: string | null;
 }
 
+interface Recipient { user_id: string; name: string }
 
 export default function RawMaterials() {
-  const { user } = useAuth();
+  const { user, isAdmin, isInventoryManager } = useAuth();
+  const canManage = isAdmin || isInventoryManager;
   const { toast } = useToast();
   const [materials, setMaterials] = useState<RawMaterial[]>([]);
-  const [stockEntries, setStockEntries] = useState<(StockEntry & { material_name?: string; material_unit?: string; person_name?: string })[]>([]);
+  const [stockEntries, setStockEntries] = useState<(StockEntry & { material_name?: string; material_unit?: string; person_name?: string; recipient_name?: string })[]>([]);
+  const [recipients, setRecipients] = useState<Recipient[]>([]);
   const [search, setSearch] = useState("");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
   const [addOpen, setAddOpen] = useState(false);
   const [stockOpen, setStockOpen] = useState(false);
+  const [issueOpen, setIssueOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
 
