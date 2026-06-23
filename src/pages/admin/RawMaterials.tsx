@@ -377,7 +377,8 @@ export default function RawMaterials() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">Raw Materials</h1>
-        <div className="flex gap-2">
+        {canManage && (
+        <div className="flex gap-2 flex-wrap">
           <Dialog open={stockOpen} onOpenChange={setStockOpen}>
             <DialogTrigger asChild>
               <Button variant="outline"><ArrowDownToLine className="h-4 w-4 mr-2" />Add Stock</Button>
