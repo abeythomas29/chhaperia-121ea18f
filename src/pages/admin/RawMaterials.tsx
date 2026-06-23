@@ -451,7 +451,85 @@ export default function RawMaterials() {
               </div>
             </DialogContent>
           </Dialog>
+
+          <Dialog open={issueOpen} onOpenChange={(o) => { setIssueOpen(o); if (!o) resetIssueForm(); }}>
+            <DialogTrigger asChild>
+              <Button variant="outline"><ArrowUpFromLine className="h-4 w-4 mr-2" />Issue Material</Button>
+            </DialogTrigger>
+            <DialogContent className="max-h-[90vh] overflow-y-auto">
+              <DialogHeader><DialogTitle>Issue Raw Material</DialogTitle></DialogHeader>
+              <div className="space-y-4">
+                <div>
+                  <Label>Raw Material</Label>
+                  <Select value={issueMaterialId} onValueChange={setIssueMaterialId}>
+                    <SelectTrigger><SelectValue placeholder="Select material" /></SelectTrigger>
+                    <SelectContent>
+                      {materials.filter(m => m.status === "active").map((m) => (
+                        <SelectItem key={m.id} value={m.id}>{m.name} — {Number(m.current_stock).toLocaleString()} {m.unit}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <Label>Quantity</Label>
+                    <Input type="number" min="0" step="0.01" value={issueQty} onChange={(e) => setIssueQty(e.target.value)} placeholder="0" />
+                  </div>
+                  <div>
+                    <Label>Unit</Label>
+                    <Select value={issueUnit} onValueChange={(v) => setIssueUnit(v as "kg" | "sqm")}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="kg">kg</SelectItem>
+                        <SelectItem value="sqm">sqm</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <Label>GSM {issueUnit === "sqm" ? "(required)" : "(optional)"}</Label>
+                    <Input type="number" min="0" step="0.01" value={issueGsm} onChange={(e) => setIssueGsm(e.target.value)} placeholder="e.g. 110" />
+                  </div>
+                  <div>
+                    <Label>Thickness (mm, optional)</Label>
+                    <Input type="number" min="0" step="0.001" value={issueThicknessMm} onChange={(e) => setIssueThicknessMm(e.target.value)} placeholder="e.g. 0.13" />
+                  </div>
+                </div>
+                <div>
+                  <Label>Issued To (Production / Slitting Manager)</Label>
+                  <Select value={issueRecipientId} onValueChange={setIssueRecipientId}>
+                    <SelectTrigger><SelectValue placeholder="Select recipient" /></SelectTrigger>
+                    <SelectContent>
+                      {recipients.map((r) => <SelectItem key={r.user_id} value={r.user_id}>{r.name}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label>Date</Label>
+                  <Input type="date" value={issueDate} onChange={(e) => setIssueDate(e.target.value)} />
+                </div>
+                <div>
+                  <Label>Notes (optional)</Label>
+                  <Input value={issueNotes} onChange={(e) => setIssueNotes(e.target.value)} placeholder="e.g. PO #" />
+                </div>
+                <div className="rounded-md border bg-muted/30 p-3 text-sm">
+                  Deduction: <span className="font-mono font-semibold">{convertedKg ? convertedKg.toLocaleString(undefined, { maximumFractionDigits: 3 }) : "—"} kg</span>
+                  {issueUnit === "sqm" && issueQtyNum > 0 && issueGsmNum > 0 && (
+                    <span className="text-muted-foreground"> &nbsp;({issueQtyNum} sqm × {issueGsmNum} gsm ÷ 1000)</span>
+                  )}
+                  {selectedIssueMaterial && (
+                    <div className="text-xs text-muted-foreground mt-1">Available: {Number(selectedIssueMaterial.current_stock).toLocaleString()} kg</div>
+                  )}
+                </div>
+                <Button onClick={submitIssue} disabled={issuing} className="w-full bg-secondary hover:bg-secondary/90">
+                  {issuing ? "Issuing…" : "Issue Material"}
+                </Button>
+              </div>
+            </DialogContent>
+          </Dialog>
         </div>
+        )}
       </div>
 
       <div className="flex flex-wrap gap-2 items-center">
