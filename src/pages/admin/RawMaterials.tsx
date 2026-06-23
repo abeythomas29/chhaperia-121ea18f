@@ -594,9 +594,10 @@ export default function RawMaterials() {
                 <TableHead>Date</TableHead>
                 <TableHead>Type</TableHead>
                 <TableHead>Material</TableHead>
-                <TableHead>Supplier / Client</TableHead>
-                <TableHead className="text-right">Quantity</TableHead>
-                <TableHead>Unit</TableHead>
+                <TableHead>Supplier / Client / Recipient</TableHead>
+                <TableHead className="text-right">Qty (kg)</TableHead>
+                <TableHead className="text-right">Issued</TableHead>
+                <TableHead className="text-right">GSM</TableHead>
                 <TableHead className="text-right">Pallets</TableHead>
                 <TableHead className="text-right">Thickness</TableHead>
                 <TableHead>Lot No.</TableHead>
@@ -607,28 +608,35 @@ export default function RawMaterials() {
             </TableHeader>
             <TableBody>
               {filteredEntries.length === 0 ? (
-                <TableRow><TableCell colSpan={12} className="text-center text-muted-foreground py-8">No stock entries match your filters</TableCell></TableRow>
+                <TableRow><TableCell colSpan={13} className="text-center text-muted-foreground py-8">No stock entries match your filters</TableCell></TableRow>
               ) : filteredEntries.map((e) => {
                 const isOut = e.kind === "out";
+                const isIssue = isOut && e.issue_unit != null;
+                const isSale = isOut && !isIssue;
                 return (
                 <TableRow key={e.id}>
                   <TableCell>{format(new Date(e.date), "dd/MM/yy")}</TableCell>
                   <TableCell>
-                    <Badge variant={isOut ? "destructive" : "default"}>{isOut ? "Out (Sale)" : "In"}</Badge>
+                    <Badge variant={isOut ? "destructive" : "default"}>
+                      {isIssue ? "Out (Issue)" : isSale ? "Out (Sale)" : "In"}
+                    </Badge>
                   </TableCell>
                   <TableCell>{e.material_name}</TableCell>
-                  <TableCell>{e.supplier ?? "—"}</TableCell>
+                  <TableCell>{e.recipient_name ?? e.supplier ?? "—"}</TableCell>
                   <TableCell className={`text-right font-mono ${isOut ? "text-destructive" : ""}`}>
                     {isOut ? "−" : "+"}{Number(e.quantity).toLocaleString()}
                   </TableCell>
-                  <TableCell className="text-muted-foreground">{e.material_unit}</TableCell>
+                  <TableCell className="text-right font-mono text-xs">
+                    {isIssue && e.issue_quantity != null ? `${Number(e.issue_quantity).toLocaleString()} ${e.issue_unit}` : "—"}
+                  </TableCell>
+                  <TableCell className="text-right font-mono">{e.gsm ?? "—"}</TableCell>
                   <TableCell className="text-right font-mono">{e.pallets ?? "—"}</TableCell>
                   <TableCell className="text-right font-mono">{e.thickness_mm != null ? `${e.thickness_mm} mm` : "—"}</TableCell>
                   <TableCell className="font-mono text-xs">{e.lot_number ?? "—"}</TableCell>
                   <TableCell className="text-muted-foreground">{e.notes ?? "—"}</TableCell>
                   <TableCell>{e.person_name}</TableCell>
                   <TableCell className="text-right">
-                    {isOut ? (
+                    {isSale || !canManage ? (
                       <span className="text-xs text-muted-foreground">—</span>
                     ) : (
                       <>
