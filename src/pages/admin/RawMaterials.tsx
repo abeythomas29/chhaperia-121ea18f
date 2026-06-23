@@ -88,8 +88,19 @@ export default function RawMaterials() {
   const [stockThickness, setStockThickness] = useState("");
   const [stockNotes, setStockNotes] = useState("");
 
+  // Issue material state
+  const [issueMaterialId, setIssueMaterialId] = useState("");
+  const [issueQty, setIssueQty] = useState("");
+  const [issueUnit, setIssueUnit] = useState<"kg" | "sqm">("kg");
+  const [issueGsm, setIssueGsm] = useState("");
+  const [issueThicknessMm, setIssueThicknessMm] = useState("");
+  const [issueRecipientId, setIssueRecipientId] = useState("");
+  const [issueDate, setIssueDate] = useState(format(new Date(), "yyyy-MM-dd"));
+  const [issueNotes, setIssueNotes] = useState("");
+  const [issuing, setIssuing] = useState(false);
+
   const fetchData = async () => {
-    const [matRes, entryRes, saleRes] = await Promise.all([
+    const [matRes, entryRes, saleRes, recRes] = await Promise.all([
       supabase.from("raw_materials").select("*").order("name"),
       supabase.from("raw_material_stock_entries").select("*").order("created_at", { ascending: false }).limit(2000),
       supabase
@@ -98,10 +109,14 @@ export default function RawMaterials() {
         .eq("item_type", "raw_material")
         .order("created_at", { ascending: false })
         .limit(2000),
+      supabase.rpc("list_production_manager_recipients"),
     ]);
     setMaterials(matRes.data ?? []);
+    setRecipients(((recRes.data ?? []) as any[]).map((r) => ({ user_id: r.user_id, name: r.name ?? "Unknown" })));
 
-    const inwardEntries = (entryRes.data ?? []) as StockEntry[];
+    const allRmse = (entryRes.data ?? []) as any[];
+    const inwardEntries = allRmse.filter((r) => (r.entry_kind ?? "in") !== "out") as StockEntry[];
+    const outwardRmse = allRmse.filter((r) => r.entry_kind === "out") as any[];
     const salesRows = (saleRes.data ?? []) as any[];
 
     // Resolve client names for sales (some sales reference company_clients by id)
