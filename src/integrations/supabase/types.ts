@@ -660,6 +660,7 @@ export type Database = {
           id: string
           issue_quantity: number | null
           issue_quantity_kg: number | null
+          issue_quantity_sqm: number | null
           issue_unit: string | null
           issued_by: string
           issued_to_user_id: string | null
@@ -667,6 +668,7 @@ export type Database = {
           product_code_id: string
           quantity: number
           recipient_type: string | null
+          recipient_user_id: string | null
           thickness_mm: number | null
           unit: string
           updated_at: string
@@ -679,6 +681,7 @@ export type Database = {
           id?: string
           issue_quantity?: number | null
           issue_quantity_kg?: number | null
+          issue_quantity_sqm?: number | null
           issue_unit?: string | null
           issued_by: string
           issued_to_user_id?: string | null
@@ -686,6 +689,7 @@ export type Database = {
           product_code_id: string
           quantity: number
           recipient_type?: string | null
+          recipient_user_id?: string | null
           thickness_mm?: number | null
           unit?: string
           updated_at?: string
@@ -698,6 +702,7 @@ export type Database = {
           id?: string
           issue_quantity?: number | null
           issue_quantity_kg?: number | null
+          issue_quantity_sqm?: number | null
           issue_unit?: string | null
           issued_by?: string
           issued_to_user_id?: string | null
@@ -705,6 +710,7 @@ export type Database = {
           product_code_id?: string
           quantity?: number
           recipient_type?: string | null
+          recipient_user_id?: string | null
           thickness_mm?: number | null
           unit?: string
           updated_at?: string
