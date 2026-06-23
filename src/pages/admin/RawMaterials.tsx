@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Package, ArrowDownToLine, Search, Pencil, Trash2 } from "lucide-react";
+import { Plus, Package, ArrowDownToLine, ArrowUpFromLine, Search, Pencil, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
@@ -35,19 +35,27 @@ interface StockEntry {
   added_by: string;
   created_at: string;
   kind?: "in" | "out";
+  issue_unit?: string | null;
+  issue_quantity?: number | null;
+  gsm?: number | null;
+  issued_to_user_id?: string | null;
 }
 
+interface Recipient { user_id: string; name: string }
 
 export default function RawMaterials() {
-  const { user } = useAuth();
+  const { user, isAdmin, isInventoryManager } = useAuth();
+  const canManage = isAdmin || isInventoryManager;
   const { toast } = useToast();
   const [materials, setMaterials] = useState<RawMaterial[]>([]);
-  const [stockEntries, setStockEntries] = useState<(StockEntry & { material_name?: string; material_unit?: string; person_name?: string })[]>([]);
+  const [stockEntries, setStockEntries] = useState<(StockEntry & { material_name?: string; material_unit?: string; person_name?: string; recipient_name?: string })[]>([]);
+  const [recipients, setRecipients] = useState<Recipient[]>([]);
   const [search, setSearch] = useState("");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
   const [addOpen, setAddOpen] = useState(false);
   const [stockOpen, setStockOpen] = useState(false);
+  const [issueOpen, setIssueOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
 
@@ -80,8 +88,19 @@ export default function RawMaterials() {
   const [stockThickness, setStockThickness] = useState("");
   const [stockNotes, setStockNotes] = useState("");
 
+  // Issue material state
+  const [issueMaterialId, setIssueMaterialId] = useState("");
+  const [issueQty, setIssueQty] = useState("");
+  const [issueUnit, setIssueUnit] = useState<"kg" | "sqm">("kg");
+  const [issueGsm, setIssueGsm] = useState("");
+  const [issueThicknessMm, setIssueThicknessMm] = useState("");
+  const [issueRecipientId, setIssueRecipientId] = useState("");
+  const [issueDate, setIssueDate] = useState(format(new Date(), "yyyy-MM-dd"));
+  const [issueNotes, setIssueNotes] = useState("");
+  const [issuing, setIssuing] = useState(false);
+
   const fetchData = async () => {
-    const [matRes, entryRes, saleRes] = await Promise.all([
+    const [matRes, entryRes, saleRes, recRes] = await Promise.all([
       supabase.from("raw_materials").select("*").order("name"),
       supabase.from("raw_material_stock_entries").select("*").order("created_at", { ascending: false }).limit(2000),
       supabase
@@ -90,10 +109,14 @@ export default function RawMaterials() {
         .eq("item_type", "raw_material")
         .order("created_at", { ascending: false })
         .limit(2000),
+      supabase.rpc("list_production_manager_recipients"),
     ]);
     setMaterials(matRes.data ?? []);
+    setRecipients(((recRes.data ?? []) as any[]).map((r) => ({ user_id: r.user_id, name: r.name ?? "Unknown" })));
 
-    const inwardEntries = (entryRes.data ?? []) as StockEntry[];
+    const allRmse = (entryRes.data ?? []) as any[];
+    const inwardEntries = allRmse.filter((r) => (r.entry_kind ?? "in") !== "out") as StockEntry[];
+    const outwardRmse = allRmse.filter((r) => r.entry_kind === "out") as any[];
     const salesRows = (saleRes.data ?? []) as any[];
 
     // Resolve client names for sales (some sales reference company_clients by id)
@@ -121,12 +144,24 @@ export default function RawMaterials() {
         kind: "out",
       }));
 
-    const allEntries = [...inwardEntries.map((e) => ({ ...e, kind: "in" as const })), ...outwardEntries]
+    const issueEntries: StockEntry[] = outwardRmse.map((r: any) => ({
+      ...r,
+      // raw_material_stock_entries stores negative quantity for issues; show absolute kg deducted
+      quantity: Math.abs(Number(r.quantity) || 0),
+      kind: "out" as const,
+    }));
+
+    const allEntries = [
+      ...inwardEntries.map((e) => ({ ...e, kind: "in" as const })),
+      ...issueEntries,
+      ...outwardEntries,
+    ]
       .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 
     // Resolve names
     const materialMap = new Map((matRes.data ?? []).map((m: RawMaterial) => [m.id, m]));
-    const userIds = [...new Set(allEntries.map((e) => e.added_by).filter(Boolean))];
+    const recipientIds = allEntries.map((e) => e.issued_to_user_id).filter(Boolean) as string[];
+    const userIds = [...new Set([...allEntries.map((e) => e.added_by).filter(Boolean), ...recipientIds])];
     let profileMap = new Map<string, string>();
     if (userIds.length > 0) {
       const { data: profiles } = await supabase.from("profiles").select("user_id, name").in("user_id", userIds);
@@ -137,6 +172,7 @@ export default function RawMaterials() {
       material_name: materialMap.get(e.raw_material_id)?.name ?? "Unknown",
       material_unit: materialMap.get(e.raw_material_id)?.unit ?? "",
       person_name: profileMap.get(e.added_by) ?? "Unknown",
+      recipient_name: e.issued_to_user_id ? (profileMap.get(e.issued_to_user_id) ?? "Unknown") : null,
     })));
   };
 
@@ -229,6 +265,73 @@ export default function RawMaterials() {
     setEditOpen(true);
   };
 
+  const resetIssueForm = () => {
+    setIssueMaterialId("");
+    setIssueQty("");
+    setIssueUnit("kg");
+    setIssueGsm("");
+    setIssueThicknessMm("");
+    setIssueRecipientId("");
+    setIssueNotes("");
+    setIssueDate(format(new Date(), "yyyy-MM-dd"));
+  };
+
+  const selectedIssueMaterial = materials.find((m) => m.id === issueMaterialId);
+  const issueGsmNum = Number(issueGsm);
+  const issueQtyNum = Number(issueQty);
+  const convertedKg = issueUnit === "kg"
+    ? issueQtyNum
+    : (issueQtyNum && issueGsmNum ? (issueQtyNum * issueGsmNum) / 1000 : 0);
+
+  const submitIssue = async () => {
+    if (!user) return;
+    if (!issueMaterialId || !issueQty || !issueRecipientId) {
+      toast({ title: "Missing fields", description: "Material, quantity and recipient are required.", variant: "destructive" });
+      return;
+    }
+    if (!(issueQtyNum > 0)) {
+      toast({ title: "Invalid quantity", description: "Quantity must be greater than 0.", variant: "destructive" });
+      return;
+    }
+    if (issueUnit === "sqm" && !(issueGsmNum > 0)) {
+      toast({ title: "GSM required", description: "Enter GSM to convert sqm to kg.", variant: "destructive" });
+      return;
+    }
+    if (!(convertedKg > 0)) {
+      toast({ title: "Invalid conversion", description: "Converted kg must be greater than 0.", variant: "destructive" });
+      return;
+    }
+    if (selectedIssueMaterial && convertedKg > Number(selectedIssueMaterial.current_stock)) {
+      toast({
+        title: "Insufficient stock",
+        description: `Available: ${Number(selectedIssueMaterial.current_stock).toLocaleString()} kg. Required: ${convertedKg.toLocaleString()} kg.`,
+        variant: "destructive",
+      });
+      return;
+    }
+    setIssuing(true);
+    // Store the issue as a negative-quantity row; existing INSERT trigger deducts current_stock.
+    const { error } = await supabase.from("raw_material_stock_entries").insert({
+      raw_material_id: issueMaterialId,
+      quantity: -convertedKg,
+      date: issueDate,
+      notes: issueNotes.trim() || null,
+      thickness_mm: issueThicknessMm ? Number(issueThicknessMm) : null,
+      added_by: user.id,
+      entry_kind: "out",
+      issue_unit: issueUnit,
+      issue_quantity: issueQtyNum,
+      gsm: issueUnit === "sqm" ? issueGsmNum : (issueGsm ? issueGsmNum : null),
+      issued_to_user_id: issueRecipientId,
+    } as any);
+    setIssuing(false);
+    if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); return; }
+    toast({ title: "Material issued", description: `Deducted ${convertedKg.toLocaleString()} kg from stock.` });
+    setIssueOpen(false);
+    resetIssueForm();
+    fetchData();
+  };
+
   const openEditEntry = (e: StockEntry) => {
     setEditEntry(e);
     setEMaterialId(e.raw_material_id);
@@ -274,7 +377,8 @@ export default function RawMaterials() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">Raw Materials</h1>
-        <div className="flex gap-2">
+        {canManage && (
+        <div className="flex gap-2 flex-wrap">
           <Dialog open={stockOpen} onOpenChange={setStockOpen}>
             <DialogTrigger asChild>
               <Button variant="outline"><ArrowDownToLine className="h-4 w-4 mr-2" />Add Stock</Button>
@@ -347,7 +451,85 @@ export default function RawMaterials() {
               </div>
             </DialogContent>
           </Dialog>
+
+          <Dialog open={issueOpen} onOpenChange={(o) => { setIssueOpen(o); if (!o) resetIssueForm(); }}>
+            <DialogTrigger asChild>
+              <Button variant="outline"><ArrowUpFromLine className="h-4 w-4 mr-2" />Issue Material</Button>
+            </DialogTrigger>
+            <DialogContent className="max-h-[90vh] overflow-y-auto">
+              <DialogHeader><DialogTitle>Issue Raw Material</DialogTitle></DialogHeader>
+              <div className="space-y-4">
+                <div>
+                  <Label>Raw Material</Label>
+                  <Select value={issueMaterialId} onValueChange={setIssueMaterialId}>
+                    <SelectTrigger><SelectValue placeholder="Select material" /></SelectTrigger>
+                    <SelectContent>
+                      {materials.filter(m => m.status === "active").map((m) => (
+                        <SelectItem key={m.id} value={m.id}>{m.name} — {Number(m.current_stock).toLocaleString()} {m.unit}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <Label>Quantity</Label>
+                    <Input type="number" min="0" step="0.01" value={issueQty} onChange={(e) => setIssueQty(e.target.value)} placeholder="0" />
+                  </div>
+                  <div>
+                    <Label>Unit</Label>
+                    <Select value={issueUnit} onValueChange={(v) => setIssueUnit(v as "kg" | "sqm")}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="kg">kg</SelectItem>
+                        <SelectItem value="sqm">sqm</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <Label>GSM {issueUnit === "sqm" ? "(required)" : "(optional)"}</Label>
+                    <Input type="number" min="0" step="0.01" value={issueGsm} onChange={(e) => setIssueGsm(e.target.value)} placeholder="e.g. 110" />
+                  </div>
+                  <div>
+                    <Label>Thickness (mm, optional)</Label>
+                    <Input type="number" min="0" step="0.001" value={issueThicknessMm} onChange={(e) => setIssueThicknessMm(e.target.value)} placeholder="e.g. 0.13" />
+                  </div>
+                </div>
+                <div>
+                  <Label>Issued To (Production / Slitting Manager)</Label>
+                  <Select value={issueRecipientId} onValueChange={setIssueRecipientId}>
+                    <SelectTrigger><SelectValue placeholder="Select recipient" /></SelectTrigger>
+                    <SelectContent>
+                      {recipients.map((r) => <SelectItem key={r.user_id} value={r.user_id}>{r.name}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label>Date</Label>
+                  <Input type="date" value={issueDate} onChange={(e) => setIssueDate(e.target.value)} />
+                </div>
+                <div>
+                  <Label>Notes (optional)</Label>
+                  <Input value={issueNotes} onChange={(e) => setIssueNotes(e.target.value)} placeholder="e.g. PO #" />
+                </div>
+                <div className="rounded-md border bg-muted/30 p-3 text-sm">
+                  Deduction: <span className="font-mono font-semibold">{convertedKg ? convertedKg.toLocaleString(undefined, { maximumFractionDigits: 3 }) : "—"} kg</span>
+                  {issueUnit === "sqm" && issueQtyNum > 0 && issueGsmNum > 0 && (
+                    <span className="text-muted-foreground"> &nbsp;({issueQtyNum} sqm × {issueGsmNum} gsm ÷ 1000)</span>
+                  )}
+                  {selectedIssueMaterial && (
+                    <div className="text-xs text-muted-foreground mt-1">Available: {Number(selectedIssueMaterial.current_stock).toLocaleString()} kg</div>
+                  )}
+                </div>
+                <Button onClick={submitIssue} disabled={issuing} className="w-full bg-secondary hover:bg-secondary/90">
+                  {issuing ? "Issuing…" : "Issue Material"}
+                </Button>
+              </div>
+            </DialogContent>
+          </Dialog>
         </div>
+        )}
       </div>
 
       <div className="flex flex-wrap gap-2 items-center">
@@ -389,8 +571,12 @@ export default function RawMaterials() {
                   <TableCell className="text-right font-mono">{m.current_stock.toLocaleString()}</TableCell>
                   <TableCell><Badge variant={m.status === "active" ? "default" : "secondary"}>{m.status}</Badge></TableCell>
                   <TableCell className="text-right">
-                    <Button variant="ghost" size="icon" onClick={() => openEdit(m)}><Pencil className="h-4 w-4" /></Button>
-                    <Button variant="ghost" size="icon" onClick={() => setDeleteId(m.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                    {canManage ? (
+                      <>
+                        <Button variant="ghost" size="icon" onClick={() => openEdit(m)}><Pencil className="h-4 w-4" /></Button>
+                        <Button variant="ghost" size="icon" onClick={() => setDeleteId(m.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                      </>
+                    ) : (<span className="text-xs text-muted-foreground">—</span>)}
                   </TableCell>
                 </TableRow>
               ))}
@@ -408,9 +594,10 @@ export default function RawMaterials() {
                 <TableHead>Date</TableHead>
                 <TableHead>Type</TableHead>
                 <TableHead>Material</TableHead>
-                <TableHead>Supplier / Client</TableHead>
-                <TableHead className="text-right">Quantity</TableHead>
-                <TableHead>Unit</TableHead>
+                <TableHead>Supplier / Client / Recipient</TableHead>
+                <TableHead className="text-right">Qty (kg)</TableHead>
+                <TableHead className="text-right">Issued</TableHead>
+                <TableHead className="text-right">GSM</TableHead>
                 <TableHead className="text-right">Pallets</TableHead>
                 <TableHead className="text-right">Thickness</TableHead>
                 <TableHead>Lot No.</TableHead>
@@ -421,28 +608,35 @@ export default function RawMaterials() {
             </TableHeader>
             <TableBody>
               {filteredEntries.length === 0 ? (
-                <TableRow><TableCell colSpan={12} className="text-center text-muted-foreground py-8">No stock entries match your filters</TableCell></TableRow>
+                <TableRow><TableCell colSpan={13} className="text-center text-muted-foreground py-8">No stock entries match your filters</TableCell></TableRow>
               ) : filteredEntries.map((e) => {
                 const isOut = e.kind === "out";
+                const isIssue = isOut && e.issue_unit != null;
+                const isSale = isOut && !isIssue;
                 return (
                 <TableRow key={e.id}>
                   <TableCell>{format(new Date(e.date), "dd/MM/yy")}</TableCell>
                   <TableCell>
-                    <Badge variant={isOut ? "destructive" : "default"}>{isOut ? "Out (Sale)" : "In"}</Badge>
+                    <Badge variant={isOut ? "destructive" : "default"}>
+                      {isIssue ? "Out (Issue)" : isSale ? "Out (Sale)" : "In"}
+                    </Badge>
                   </TableCell>
                   <TableCell>{e.material_name}</TableCell>
-                  <TableCell>{e.supplier ?? "—"}</TableCell>
+                  <TableCell>{e.recipient_name ?? e.supplier ?? "—"}</TableCell>
                   <TableCell className={`text-right font-mono ${isOut ? "text-destructive" : ""}`}>
                     {isOut ? "−" : "+"}{Number(e.quantity).toLocaleString()}
                   </TableCell>
-                  <TableCell className="text-muted-foreground">{e.material_unit}</TableCell>
+                  <TableCell className="text-right font-mono text-xs">
+                    {isIssue && e.issue_quantity != null ? `${Number(e.issue_quantity).toLocaleString()} ${e.issue_unit}` : "—"}
+                  </TableCell>
+                  <TableCell className="text-right font-mono">{e.gsm ?? "—"}</TableCell>
                   <TableCell className="text-right font-mono">{e.pallets ?? "—"}</TableCell>
                   <TableCell className="text-right font-mono">{e.thickness_mm != null ? `${e.thickness_mm} mm` : "—"}</TableCell>
                   <TableCell className="font-mono text-xs">{e.lot_number ?? "—"}</TableCell>
                   <TableCell className="text-muted-foreground">{e.notes ?? "—"}</TableCell>
                   <TableCell>{e.person_name}</TableCell>
                   <TableCell className="text-right">
-                    {isOut ? (
+                    {isSale || !canManage ? (
                       <span className="text-xs text-muted-foreground">—</span>
                     ) : (
                       <>

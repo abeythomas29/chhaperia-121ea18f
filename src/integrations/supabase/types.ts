@@ -331,8 +331,12 @@ export type Database = {
           added_by: string
           created_at: string
           date: string
+          entry_kind: string
           gsm: number | null
           id: string
+          issue_quantity: number | null
+          issue_unit: string | null
+          issued_to_user_id: string | null
           lot_number: string | null
           notes: string | null
           pallets: number | null
@@ -345,8 +349,12 @@ export type Database = {
           added_by: string
           created_at?: string
           date?: string
+          entry_kind?: string
           gsm?: number | null
           id?: string
+          issue_quantity?: number | null
+          issue_unit?: string | null
+          issued_to_user_id?: string | null
           lot_number?: string | null
           notes?: string | null
           pallets?: number | null
@@ -359,8 +367,12 @@ export type Database = {
           added_by?: string
           created_at?: string
           date?: string
+          entry_kind?: string
           gsm?: number | null
           id?: string
+          issue_quantity?: number | null
+          issue_unit?: string | null
+          issued_to_user_id?: string | null
           lot_number?: string | null
           notes?: string | null
           pallets?: number | null
@@ -373,6 +385,13 @@ export type Database = {
           {
             foreignKeyName: "raw_material_stock_entries_added_by_fkey"
             columns: ["added_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "raw_material_stock_entries_issued_to_user_fk"
+            columns: ["issued_to_user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["user_id"]
