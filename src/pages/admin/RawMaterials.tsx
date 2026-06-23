@@ -144,12 +144,24 @@ export default function RawMaterials() {
         kind: "out",
       }));
 
-    const allEntries = [...inwardEntries.map((e) => ({ ...e, kind: "in" as const })), ...outwardEntries]
+    const issueEntries: StockEntry[] = outwardRmse.map((r: any) => ({
+      ...r,
+      // raw_material_stock_entries stores negative quantity for issues; show absolute kg deducted
+      quantity: Math.abs(Number(r.quantity) || 0),
+      kind: "out" as const,
+    }));
+
+    const allEntries = [
+      ...inwardEntries.map((e) => ({ ...e, kind: "in" as const })),
+      ...issueEntries,
+      ...outwardEntries,
+    ]
       .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 
     // Resolve names
     const materialMap = new Map((matRes.data ?? []).map((m: RawMaterial) => [m.id, m]));
-    const userIds = [...new Set(allEntries.map((e) => e.added_by).filter(Boolean))];
+    const recipientIds = allEntries.map((e) => e.issued_to_user_id).filter(Boolean) as string[];
+    const userIds = [...new Set([...allEntries.map((e) => e.added_by).filter(Boolean), ...recipientIds])];
     let profileMap = new Map<string, string>();
     if (userIds.length > 0) {
       const { data: profiles } = await supabase.from("profiles").select("user_id, name").in("user_id", userIds);
@@ -160,6 +172,7 @@ export default function RawMaterials() {
       material_name: materialMap.get(e.raw_material_id)?.name ?? "Unknown",
       material_unit: materialMap.get(e.raw_material_id)?.unit ?? "",
       person_name: profileMap.get(e.added_by) ?? "Unknown",
+      recipient_name: e.issued_to_user_id ? (profileMap.get(e.issued_to_user_id) ?? "Unknown") : null,
     })));
   };
 
