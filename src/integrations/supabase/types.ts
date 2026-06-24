@@ -548,6 +548,7 @@ export type Database = {
           remaining_returned: number
           slitting_manager_id: string
           source_quantity: number
+          stock_issue_id: string | null
           thickness_mm: number | null
           unit: string
           updated_at: string
@@ -565,6 +566,7 @@ export type Database = {
           remaining_returned?: number
           slitting_manager_id: string
           source_quantity: number
+          stock_issue_id?: string | null
           thickness_mm?: number | null
           unit?: string
           updated_at?: string
@@ -582,6 +584,7 @@ export type Database = {
           remaining_returned?: number
           slitting_manager_id?: string
           source_quantity?: number
+          stock_issue_id?: string | null
           thickness_mm?: number | null
           unit?: string
           updated_at?: string
@@ -607,6 +610,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "slitting_entries_stock_issue_id_fkey"
+            columns: ["stock_issue_id"]
+            isOneToOne: false
+            referencedRelation: "stock_issues"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -664,12 +674,15 @@ export type Database = {
           issue_quantity: number | null
           issue_quantity_kg: number | null
           issue_quantity_sqm: number | null
+          issue_type: string | null
           issue_unit: string | null
           issued_by: string
           issued_to_user_id: string | null
           notes: string | null
-          product_code_id: string
+          product_code: string | null
+          product_code_id: string | null
           quantity: number
+          raw_material_id: string | null
           recipient_type: string | null
           recipient_user_id: string | null
           thickness_mm: number | null
@@ -685,12 +698,15 @@ export type Database = {
           issue_quantity?: number | null
           issue_quantity_kg?: number | null
           issue_quantity_sqm?: number | null
+          issue_type?: string | null
           issue_unit?: string | null
           issued_by: string
           issued_to_user_id?: string | null
           notes?: string | null
-          product_code_id: string
+          product_code?: string | null
+          product_code_id?: string | null
           quantity: number
+          raw_material_id?: string | null
           recipient_type?: string | null
           recipient_user_id?: string | null
           thickness_mm?: number | null
@@ -706,12 +722,15 @@ export type Database = {
           issue_quantity?: number | null
           issue_quantity_kg?: number | null
           issue_quantity_sqm?: number | null
+          issue_type?: string | null
           issue_unit?: string | null
           issued_by?: string
           issued_to_user_id?: string | null
           notes?: string | null
-          product_code_id?: string
+          product_code?: string | null
+          product_code_id?: string | null
           quantity?: number
+          raw_material_id?: string | null
           recipient_type?: string | null
           recipient_user_id?: string | null
           thickness_mm?: number | null
@@ -745,6 +764,13 @@ export type Database = {
             columns: ["product_code_id"]
             isOneToOne: false
             referencedRelation: "product_codes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_issues_raw_material_id_fkey"
+            columns: ["raw_material_id"]
+            isOneToOne: false
+            referencedRelation: "raw_materials"
             referencedColumns: ["id"]
           },
         ]
@@ -796,6 +822,47 @@ export type Database = {
         Returns: {
           name: string
           user_id: string
+        }[]
+      }
+      list_slitting_issued_materials: {
+        Args: never
+        Returns: {
+          consumed_quantity: number
+          date: string
+          gsm: number
+          issued_quantity: number
+          material_name: string
+          notes: string
+          raw_material_id: string
+          remaining_quantity: number
+          stock_issue_id: string
+          thickness_mm: number
+          unit: string
+        }[]
+      }
+      list_stock_issues: {
+        Args: never
+        Returns: {
+          client_id: string
+          client_name: string
+          created_at: string
+          date: string
+          gsm: number
+          id: string
+          issue_type: string
+          issued_by: string
+          issued_by_name: string
+          issued_to_user_id: string
+          notes: string
+          product_code: string
+          product_code_id: string
+          quantity: number
+          raw_material_id: string
+          raw_material_name: string
+          recipient_name: string
+          recipient_type: string
+          thickness_mm: number
+          unit: string
         }[]
       }
     }
