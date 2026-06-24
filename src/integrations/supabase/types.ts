@@ -332,6 +332,7 @@ export type Database = {
           created_at: string
           date: string
           entry_kind: string
+          entry_type: string
           gsm: number | null
           id: string
           issue_quantity: number | null
@@ -350,6 +351,7 @@ export type Database = {
           created_at?: string
           date?: string
           entry_kind?: string
+          entry_type?: string
           gsm?: number | null
           id?: string
           issue_quantity?: number | null
@@ -368,6 +370,7 @@ export type Database = {
           created_at?: string
           date?: string
           entry_kind?: string
+          entry_type?: string
           gsm?: number | null
           id?: string
           issue_quantity?: number | null
