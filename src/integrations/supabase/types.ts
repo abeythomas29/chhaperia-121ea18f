@@ -852,7 +852,6 @@ export type Database = {
           issue_type: string
           issued_by: string
           issued_by_name: string
-          issued_to_user_id: string
           notes: string
           product_code: string
           product_code_id: string
@@ -861,6 +860,7 @@ export type Database = {
           raw_material_name: string
           recipient_name: string
           recipient_type: string
+          recipient_user_id: string
           thickness_mm: number
           unit: string
         }[]
