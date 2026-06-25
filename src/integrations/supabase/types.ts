@@ -678,6 +678,7 @@ export type Database = {
           issue_unit: string | null
           issued_by: string
           issued_to_user_id: string | null
+          lot_number: string | null
           notes: string | null
           product_code: string | null
           product_code_id: string | null
@@ -702,6 +703,7 @@ export type Database = {
           issue_unit?: string | null
           issued_by: string
           issued_to_user_id?: string | null
+          lot_number?: string | null
           notes?: string | null
           product_code?: string | null
           product_code_id?: string | null
@@ -726,6 +728,7 @@ export type Database = {
           issue_unit?: string | null
           issued_by?: string
           issued_to_user_id?: string | null
+          lot_number?: string | null
           notes?: string | null
           product_code?: string | null
           product_code_id?: string | null
