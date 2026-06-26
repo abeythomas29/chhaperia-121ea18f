@@ -415,6 +415,7 @@ export type Database = {
           production_entry_id: string
           quantity_used: number
           raw_material_id: string
+          stock_issue_id: string | null
         }
         Insert: {
           created_at?: string
@@ -422,6 +423,7 @@ export type Database = {
           production_entry_id: string
           quantity_used?: number
           raw_material_id: string
+          stock_issue_id?: string | null
         }
         Update: {
           created_at?: string
@@ -429,6 +431,7 @@ export type Database = {
           production_entry_id?: string
           quantity_used?: number
           raw_material_id?: string
+          stock_issue_id?: string | null
         }
         Relationships: [
           {
@@ -443,6 +446,13 @@ export type Database = {
             columns: ["raw_material_id"]
             isOneToOne: false
             referencedRelation: "raw_materials"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "raw_material_usage_stock_issue_id_fkey"
+            columns: ["stock_issue_id"]
+            isOneToOne: false
+            referencedRelation: "stock_issues"
             referencedColumns: ["id"]
           },
         ]
@@ -775,6 +785,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "raw_materials"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_issues_recipient_user_id_fkey"
+            columns: ["recipient_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
           },
         ]
       }
