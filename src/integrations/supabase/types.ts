@@ -336,6 +336,7 @@ export type Database = {
           gsm: number | null
           id: string
           issue_quantity: number | null
+          issue_quantity_kg: number | null
           issue_unit: string | null
           issued_to_user_id: string | null
           lot_number: string | null
@@ -355,6 +356,7 @@ export type Database = {
           gsm?: number | null
           id?: string
           issue_quantity?: number | null
+          issue_quantity_kg?: number | null
           issue_unit?: string | null
           issued_to_user_id?: string | null
           lot_number?: string | null
@@ -374,6 +376,7 @@ export type Database = {
           gsm?: number | null
           id?: string
           issue_quantity?: number | null
+          issue_quantity_kg?: number | null
           issue_unit?: string | null
           issued_to_user_id?: string | null
           lot_number?: string | null
@@ -635,34 +638,43 @@ export type Database = {
           created_at: string
           date: string
           id: string
+          location: string | null
           notes: string | null
+          return_type: string | null
           returned_by: string
           returned_quantity: number
           slitting_entry_id: string
           unit: string
           updated_at: string
+          wastage_quantity: number | null
         }
         Insert: {
           created_at?: string
           date?: string
           id?: string
+          location?: string | null
           notes?: string | null
+          return_type?: string | null
           returned_by: string
           returned_quantity?: number
           slitting_entry_id: string
           unit?: string
           updated_at?: string
+          wastage_quantity?: number | null
         }
         Update: {
           created_at?: string
           date?: string
           id?: string
+          location?: string | null
           notes?: string | null
+          return_type?: string | null
           returned_by?: string
           returned_quantity?: number
           slitting_entry_id?: string
           unit?: string
           updated_at?: string
+          wastage_quantity?: number | null
         }
         Relationships: [
           {
