@@ -860,14 +860,16 @@ export type Database = {
         Args: never
         Returns: {
           consumed_quantity: number
-          date: string
+          display_name: string
           gsm: number
           issue_type: string
           issued_quantity: number
-          item_name: string
+          lot_no: string
           notes: string
+          product_code: string
           product_code_id: string
           raw_material_id: string
+          raw_material_name: string
           remaining_quantity: number
           stock_issue_id: string
           thickness_mm: number
