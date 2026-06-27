@@ -862,9 +862,11 @@ export type Database = {
           consumed_quantity: number
           date: string
           gsm: number
+          issue_type: string
           issued_quantity: number
-          material_name: string
+          item_name: string
           notes: string
+          product_code_id: string
           raw_material_id: string
           remaining_quantity: number
           stock_issue_id: string
