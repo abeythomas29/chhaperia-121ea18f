@@ -849,6 +849,29 @@ export type Database = {
       get_user_role: { Args: { _user_id: string }; Returns: string }
       has_role: { Args: { _role: string; _user_id: string }; Returns: boolean }
       is_admin: { Args: { _user_id: string }; Returns: boolean }
+      list_manager_issued_materials: {
+        Args: { include_closed?: boolean }
+        Returns: {
+          consumed_quantity: number
+          display_name: string
+          gsm: number
+          issue_date: string
+          issue_type: string
+          issued_quantity: number
+          lot_no: string
+          notes: string
+          pending_quantity: number
+          product_code: string
+          product_code_id: string
+          raw_material_id: string
+          raw_material_name: string
+          returned_quantity: number
+          stock_issue_id: string
+          thickness_mm: number
+          unit: string
+          wastage_quantity: number
+        }[]
+      }
       list_production_manager_recipients: {
         Args: never
         Returns: {
