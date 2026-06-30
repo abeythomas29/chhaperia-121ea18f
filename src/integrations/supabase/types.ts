@@ -52,6 +52,7 @@ export type Database = {
           rolls_produced: number
           rolls_taken: number
           slitting_entry_id: string | null
+          stock_issue_id: string | null
           thickness_mm: number | null
           total_quantity: number | null
           unit: string
@@ -70,6 +71,7 @@ export type Database = {
           rolls_produced?: number
           rolls_taken?: number
           slitting_entry_id?: string | null
+          stock_issue_id?: string | null
           thickness_mm?: number | null
           total_quantity?: number | null
           unit?: string
@@ -88,12 +90,21 @@ export type Database = {
           rolls_produced?: number
           rolls_taken?: number
           slitting_entry_id?: string | null
+          stock_issue_id?: string | null
           thickness_mm?: number | null
           total_quantity?: number | null
           unit?: string
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "head36_entries_stock_issue_id_fkey"
+            columns: ["stock_issue_id"]
+            isOneToOne: false
+            referencedRelation: "stock_issues"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       product_categories: {
         Row: {
@@ -849,6 +860,30 @@ export type Database = {
       get_user_role: { Args: { _user_id: string }; Returns: string }
       has_role: { Args: { _role: string; _user_id: string }; Returns: boolean }
       is_admin: { Args: { _user_id: string }; Returns: boolean }
+      list_36_head_source_slitting_entries: {
+        Args: never
+        Returns: {
+          client_id: string
+          client_name: string
+          date: string
+          display_name: string
+          gsm: number
+          issue_type: string
+          lot_no: string
+          notes: string
+          primary_consumed_in_slitting: number
+          primary_issued_quantity: number
+          primary_pending_quantity: number
+          product_code_id: string
+          secondary_consumed_in_36_head: number
+          secondary_pending_quantity: number
+          secondary_slitting_produced_quantity: number
+          slitting_entry_id: string
+          stock_issue_id: string
+          thickness_mm: number
+          unit: string
+        }[]
+      }
       list_manager_issued_materials: {
         Args: { include_closed?: boolean }
         Returns: {
