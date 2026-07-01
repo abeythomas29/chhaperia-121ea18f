@@ -221,6 +221,12 @@ export type Database = {
           quantity_per_roll: number
           raw_material_included: boolean | null
           rolls_count: number
+          source_gsm: number | null
+          source_product_code_id: string | null
+          source_quantity: number | null
+          source_raw_material_id: string | null
+          source_thickness_mm: number | null
+          source_unit: string | null
           surface_resistance: number | null
           swelling_height: number | null
           swelling_speed: number | null
@@ -244,6 +250,12 @@ export type Database = {
           quantity_per_roll: number
           raw_material_included?: boolean | null
           rolls_count: number
+          source_gsm?: number | null
+          source_product_code_id?: string | null
+          source_quantity?: number | null
+          source_raw_material_id?: string | null
+          source_thickness_mm?: number | null
+          source_unit?: string | null
           surface_resistance?: number | null
           swelling_height?: number | null
           swelling_speed?: number | null
@@ -267,6 +279,12 @@ export type Database = {
           quantity_per_roll?: number
           raw_material_included?: boolean | null
           rolls_count?: number
+          source_gsm?: number | null
+          source_product_code_id?: string | null
+          source_quantity?: number | null
+          source_raw_material_id?: string | null
+          source_thickness_mm?: number | null
+          source_unit?: string | null
           surface_resistance?: number | null
           swelling_height?: number | null
           swelling_speed?: number | null
@@ -571,7 +589,12 @@ export type Database = {
           product_code_id: string
           remaining_returned: number
           slitting_manager_id: string
+          source_gsm: number | null
+          source_product_code_id: string | null
           source_quantity: number
+          source_raw_material_id: string | null
+          source_thickness_mm: number | null
+          source_unit: string | null
           stock_issue_id: string | null
           thickness_mm: number | null
           unit: string
@@ -589,7 +612,12 @@ export type Database = {
           product_code_id: string
           remaining_returned?: number
           slitting_manager_id: string
+          source_gsm?: number | null
+          source_product_code_id?: string | null
           source_quantity: number
+          source_raw_material_id?: string | null
+          source_thickness_mm?: number | null
+          source_unit?: string | null
           stock_issue_id?: string | null
           thickness_mm?: number | null
           unit?: string
@@ -607,7 +635,12 @@ export type Database = {
           product_code_id?: string
           remaining_returned?: number
           slitting_manager_id?: string
+          source_gsm?: number | null
+          source_product_code_id?: string | null
           source_quantity?: number
+          source_raw_material_id?: string | null
+          source_thickness_mm?: number | null
+          source_unit?: string | null
           stock_issue_id?: string | null
           thickness_mm?: number | null
           unit?: string
@@ -865,6 +898,7 @@ export type Database = {
         Returns: {
           client_id: string
           client_name: string
+          cut_width_mm: number
           date: string
           display_name: string
           gsm: number
@@ -875,9 +909,16 @@ export type Database = {
           primary_issued_quantity: number
           primary_pending_quantity: number
           product_code_id: string
+          secondary_consumed_36_head_kg: number
+          secondary_consumed_36_head_sqm: number
           secondary_consumed_in_36_head: number
+          secondary_pending_kg: number
           secondary_pending_quantity: number
+          secondary_pending_sqm: number
+          secondary_pending_unit: string
+          secondary_slitting_produced_kg: number
           secondary_slitting_produced_quantity: number
+          secondary_slitting_produced_sqm: number
           slitting_entry_id: string
           stock_issue_id: string
           thickness_mm: number
@@ -895,7 +936,9 @@ export type Database = {
           issued_quantity: number
           lot_no: string
           notes: string
+          pending_kg: number
           pending_quantity: number
+          pending_sqm: number
           product_code: string
           product_code_id: string
           raw_material_id: string
