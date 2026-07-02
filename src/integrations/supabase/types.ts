@@ -135,6 +135,7 @@ export type Database = {
           category_id: string
           code: string
           created_at: string
+          gsm: number | null
           id: string
           status: string
           updated_at: string
@@ -143,6 +144,7 @@ export type Database = {
           category_id: string
           code: string
           created_at?: string
+          gsm?: number | null
           id?: string
           status?: string
           updated_at?: string
@@ -151,6 +153,7 @@ export type Database = {
           category_id?: string
           code?: string
           created_at?: string
+          gsm?: number | null
           id?: string
           status?: string
           updated_at?: string
